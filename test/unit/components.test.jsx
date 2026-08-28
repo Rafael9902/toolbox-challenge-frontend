@@ -1,10 +1,10 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { EmptyState } from '../../src/shared/components/EmptyState.jsx'
 import { ErrorAlert } from '../../src/shared/components/ErrorAlert.jsx'
 import { Loading } from '../../src/shared/components/Loading.jsx'
-import { FilesSummary } from '../../src/modules/files/components/FilesSummary.jsx'
+import { FilesTable } from '../../src/modules/files/components/FilesTable.jsx'
 
 describe('Loading', () => {
   it('exposes an accessible description of what is loading', () => {
@@ -70,30 +70,94 @@ describe('EmptyState', () => {
   })
 })
 
-describe('FilesSummary', () => {
-  const FILES = [
-    { file: 'test3.csv', lines: [{ text: 'g', number: 1, hex: 'abc' }] },
-    { file: 'test9.csv', lines: [{ text: 'a', number: 2, hex: 'def' }, { text: 'b', number: 3, hex: 'ghi' }] },
-    { file: 'test1.csv', lines: [] }
+/** Reads the keys React will use for the rows, which the DOM does not expose. */
+const rowKeys = (rows) => {
+  const children = FilesTable({ rows }).props.children
+  const body = children.find((child) => child.type === 'tbody')
+  return body.props.children.map((row) => row.key)
+}
+
+describe('FilesTable', () => {
+  const ROWS = [
+    {
+      id: 'test3.csv|101382507|65badd1f29e6235199261cd3026a97f5',
+      file: 'test3.csv',
+      text: 'g',
+      number: 101382507,
+      hex: '65badd1f29e6235199261cd3026a97f5'
+    },
+    {
+      id: 'test3.csv|57685292|cb6dfa6422d170d2ae99aaf3f99665e4',
+      file: 'test3.csv',
+      text: 'mwmBQxoeKkxMm',
+      number: 57685292,
+      hex: 'cb6dfa6422d170d2ae99aaf3f99665e4'
+    },
+    {
+      id: 'test9.csv|527447|b57c543e4d1f0dab7d4353f9dd0db302',
+      file: 'test9.csv',
+      text: 'clnburZYpPQgBiveSSeq',
+      number: 527447,
+      hex: 'b57c543e4d1f0dab7d4353f9dd0db302'
+    }
   ]
 
-  it('lists one entry per file it is handed', () => {
-    render(<FilesSummary files={FILES} />)
+  it('heads the table with the four columns of the challenge', () => {
+    render(<FilesTable rows={ROWS} />)
 
-    expect(screen.getAllByRole('listitem')).toHaveLength(3)
+    expect(screen.getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual([
+      'File Name',
+      'Text',
+      'Number',
+      'Hex'
+    ])
   })
 
-  it('shows how many lines each file carries', () => {
-    render(<FilesSummary files={FILES} />)
+  it('renders one row per line, plus the header row', () => {
+    render(<FilesTable rows={ROWS} />)
 
-    expect(screen.getByText('1 line')).toBeInTheDocument()
-    expect(screen.getByText('2 lines')).toBeInTheDocument()
-    expect(screen.getByText('0 lines')).toBeInTheDocument()
+    expect(screen.getAllByRole('row')).toHaveLength(ROWS.length + 1)
   })
 
-  it('renders a file whose lines came empty without breaking', () => {
-    render(<FilesSummary files={[{ file: 'test1.csv', lines: [] }]} />)
+  it('repeats the file name on every row of the same file', () => {
+    render(<FilesTable rows={ROWS} />)
 
-    expect(screen.getByText('test1.csv')).toBeInTheDocument()
+    expect(screen.getAllByRole('cell', { name: 'test3.csv' })).toHaveLength(2)
+  })
+
+  it('shows the text, the number and the hex of a line', () => {
+    render(<FilesTable rows={ROWS} />)
+
+    const cells = within(screen.getAllByRole('row')[2]).getAllByRole('cell')
+    expect(cells.map((cell) => cell.textContent)).toEqual([
+      'test3.csv',
+      'mwmBQxoeKkxMm',
+      '57685292',
+      'cb6dfa6422d170d2ae99aaf3f99665e4'
+    ])
+  })
+
+  it('flattens the rows of several files into the same table', () => {
+    render(<FilesTable rows={ROWS} />)
+
+    expect(screen.getAllByRole('row')[3]).toHaveTextContent('test9.csv')
+  })
+
+  it('keys every row by its identity, never by its position', () => {
+    expect(rowKeys(ROWS)).toEqual(ROWS.map(({ id }) => id))
+    expect(rowKeys(ROWS)).not.toEqual(['0', '1', '2'])
+  })
+
+  it('keeps the keys unique across the whole table', () => {
+    const keys = rowKeys(ROWS)
+
+    expect(new Set(keys).size).toBe(keys.length)
+  })
+
+  it('renders the headers without any data row when handed no rows', () => {
+    render(<FilesTable rows={[]} />)
+
+    expect(screen.getAllByRole('row')).toHaveLength(1)
+    expect(screen.getByRole('columnheader', { name: 'File Name' })).toBeInTheDocument()
   })
 })
