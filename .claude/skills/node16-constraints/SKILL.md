@@ -32,6 +32,19 @@ campo `engines`.
 
 `vite` y `vitest` **no se usan acá**: el enunciado nombra Webpack en los requisitos técnicos.
 
+## Dependencias transitivas: `overrides`
+
+Una dependencia directa compatible puede arrastrar una transitiva que no lo es. `@testing-library/react@14`
+declara `@testing-library/dom@^9.0.0`, pero npm resolvía la 10.x, que exige Node 18 y avisa con
+`EBADENGINE`. Se fija con `overrides` en `package.json`:
+
+```json
+"overrides": { "@testing-library/dom": "^9.3.4" }
+```
+
+Si aparece un `EBADENGINE` nuevo en `npm ci`, no lo ignores: significa que algo del árbol dejó de
+soportar Node 16. Identificá el paquete y agregalo acá.
+
 ## Babel sí está permitido en el frontend
 
 El enunciado prohíbe Babel **en el API**, no acá:

@@ -119,7 +119,9 @@ suite verde no dice nada sobre si el bundle sigue compilando.
 - **Sin Redux ni React Query**: hay una pantalla y un hook. Redux es punto opcional del challenge y se
   evaluará cuando exista estado compartido de verdad.
 - **Versiones fijadas por Node 16**: `webpack-dev-server@4`, `husky@8`, `@commitlint/cli@17` — las
-  siguientes majors exigen Node 18+. Ver `.claude/skills/node16-constraints/`.
+  siguientes majors exigen Node 18+. Y un `overrides` para `@testing-library/dom`, que npm resolvía a
+  una 10.x incompatible pese a que React Testing Library declara `^9.0.0`. Ver
+  `.claude/skills/node16-constraints/`.
 
 ## Skills de Claude Code
 
