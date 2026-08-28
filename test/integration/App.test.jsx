@@ -20,6 +20,14 @@ describe('App', () => {
     expect(screen.getByText('React Test App')).toBeInTheDocument()
   })
 
+  it('mounts the features inside the centered content area', async () => {
+    mockFetch(respondWith({ status: 'ok' }))
+
+    render(<App />)
+
+    expect(screen.getByRole('main')).toContainElement(await screen.findByRole('alert'))
+  })
+
   it('shows a loading indicator while the API is being reached', () => {
     mockFetch(() => new Promise(() => {}))
 
