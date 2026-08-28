@@ -77,6 +77,46 @@ describe('App', () => {
     await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(2))
   })
 
+  it('shows the empty state when the API answers with nothing to render', async () => {
+    mockFetch(respondWith({}))
+
+    render(<App />)
+
+    expect(await screen.findByText(/reported no status/i)).toBeInTheDocument()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /retry/i })).not.toBeInTheDocument()
+  })
+
+  it('shows the loading indicator again while the retry is in flight', async () => {
+    let respond
+    global.fetch = jest
+      .fn()
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockImplementationOnce(() => new Promise((resolve) => { respond = resolve }))
+
+    render(<App />)
+    await userEvent.click(await screen.findByRole('button', { name: /retry/i }))
+
+    expect(screen.getByRole('status')).toBeInTheDocument()
+    expect(screen.queryAllByRole('alert')).toHaveLength(0)
+
+    respond({ ok: true, status: 200, json: async () => ({ status: 'ok' }) })
+    expect(await screen.findByText('ok')).toBeInTheDocument()
+  })
+
+  it('shows one state at a time as the request resolves', async () => {
+    mockFetch(respondWith({ status: 'ok' }))
+
+    render(<App />)
+
+    expect(screen.getByRole('status')).toBeInTheDocument()
+    expect(screen.queryAllByRole('alert')).toHaveLength(0)
+
+    expect(await screen.findByText('ok')).toBeInTheDocument()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.queryAllByRole('alert')).toHaveLength(1)
+  })
+
   it('never leaks the transport error to the user', async () => {
     mockFetch(() => Promise.reject(new TypeError('ECONNREFUSED 127.0.0.1:3000')))
 
