@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 
-import * as filesApi from './files.api.js'
+import * as filesApi from '../files.api.js'
 
 /**
+ * State of a request owned by a hook.
+ *
  * @typedef  {Object} AsyncState
  * @property {*}        data     Payload once it arrived, otherwise null.
  * @property {boolean}  loading  True while the request is in flight.

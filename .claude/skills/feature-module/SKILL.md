@@ -15,23 +15,44 @@ Cada feature es una carpeta autocontenida en `src/modules/<feature>/`.
 src/modules/<feature>/
 ├── index.js                  # barril: declara la API pública del módulo
 ├── <feature>.api.js          # única capa que habla HTTP
-├── <feature>.hooks.js        # estado y efectos; devuelve datos planos
-└── <Feature>Thing.jsx        # componentes: sólo presentación
+├── hooks/
+│   └── useThing.js           # estado y efectos; devuelven datos planos
+├── components/
+│   └── Thing.jsx             # presentacionales: reciben props, sin estado propio
+└── pages/
+    └── <Feature>Page.jsx     # vista conectada: cablea hooks con componentes
 ```
+
+Un archivo por hook y por componente, nombrado como lo que exporta (`useHealth.js`, `HealthBadge.jsx`).
+El `.api.js` queda plano: es un solo archivo, y una carpeta para un archivo no organiza nada.
 
 **No agregues capas que no tengan trabajo real.** Si la feature no llama al API, no lleva `.api.js`;
 si no tiene estado asincrónico, no lleva hook.
+
+### `pages/` no implica router
+
+**Este proyecto no tiene router y no lo necesita:** el challenge es una sola pantalla, y el filtro por
+`fileName` es un control de UI, no una ruta. `pages/` acá significa **vista conectada** —la que llama
+hooks y decide qué rama renderizar— por oposición a `components/`, que son presentacionales puros.
+
+No agregues `react-router-dom` porque exista una carpeta `pages`. Ver la tabla de descartados en
+`clean-code-solid`.
 
 ## Reglas de capa
 
 | Capa | Puede | NUNCA |
 |---|---|---|
 | `*.api.js` | Llamar al backend vía `shared/http`, devolver datos planos, lanzar `ApiError` tipado | Conocer React, tocar estado, formatear para la vista |
-| `*.hooks.js` | `useState` / `useEffect`, orquestar llamadas, exponer `{ data, loading, error }` | Devolver JSX, importar componentes, conocer clases de CSS |
-| `*.jsx` | Renderizar, manejar eventos de UI, componer otros componentes | Llamar a `fetch` o al `.api.js` directamente, contener lógica de negocio |
+| `hooks/` | `useState` / `useEffect`, orquestar llamadas, exponer `{ data, loading, error }` | Devolver JSX, importar componentes, conocer clases de CSS |
+| `pages/` | Llamar hooks, decidir qué rama se renderiza, componer componentes | Llamar al `.api.js` directo, contener lógica de negocio |
+| `components/` | Renderizar props, emitir eventos hacia arriba | Llamar hooks de datos, hacer requests, tener estado de servidor |
 
-Regla mnemotécnica: **el componente pregunta, el hook orquesta, el api trae.**
-Si un componente importa `*.api.js`, está mal: eso va en un hook.
+Regla mnemotécnica: **la página pregunta, el hook orquesta, el api trae, el componente muestra.**
+Si un componente importa `*.api.js` o un hook de datos, está mal.
+
+El corte entre `pages/` y `components/` no es cosmético: un componente que sólo recibe props se testea
+con `render(<X prop="..." />)` y sin mocks, mientras que la página se testea con el hook mockeado o
+por integración.
 
 ## Encapsulación: el barril es la única puerta
 
@@ -81,8 +102,8 @@ return <Table rows={data} />
 ## Checklist para agregar una feature
 
 1. Crear `src/modules/<feature>/` con las capas que realmente necesite.
-2. Escribir el `.api.js`, después el hook, después los componentes.
-3. Reexportar en `index.js` lo que la app monta, y montarlo en `App.jsx`.
+2. Escribir el `.api.js`, después el hook, después los componentes, y al final la página que los une.
+3. Reexportar la página en `index.js` y montarla en `App.jsx`.
 4. Test unitario del hook con el api mockeado + test de integración de la pantalla —
    ver la skill `testing-jest`.
 

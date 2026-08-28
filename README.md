@@ -61,8 +61,9 @@ src/
 │   └── files/
 │       ├── index.js              # barril: API pública del módulo
 │       ├── files.api.js          # única capa que habla HTTP
-│       ├── files.hooks.js        # estado y efectos; devuelve datos planos
-│       └── FilesHealth.jsx       # presentación
+│       ├── hooks/                # estado y efectos; devuelven datos planos
+│       ├── components/           # presentacionales: reciben props
+│       └── pages/                # vista conectada: cablea hooks con componentes
 └── shared/
     ├── config.js                 # configuración, valores hardcodeados
     ├── apiError.js               # errores tipados
@@ -70,8 +71,13 @@ src/
     └── components/               # Layout, Loading, ErrorAlert
 ```
 
-**Reglas de capa:** el componente pregunta, el hook orquesta, el api trae. Un componente nunca llama
-a `fetch` ni al `.api.js`; un hook nunca devuelve JSX; el `.api.js` nunca conoce React.
+**Reglas de capa:** la página pregunta, el hook orquesta, el api trae, el componente muestra. Un
+componente nunca llama a `fetch` ni a un hook de datos; un hook nunca devuelve JSX; el `.api.js` nunca
+conoce React.
+
+**`pages/` no implica router.** El challenge es una sola pantalla y el filtro por `fileName` es un
+control de UI, no una ruta, así que no hay `react-router-dom`. `pages/` distingue la vista *conectada*
+de los componentes presentacionales.
 
 **Encapsulación:** un módulo declara su API pública en `index.js`. `App.jsx` nunca importa un hook ni
 un api de una feature. Un módulo sólo puede importar de sí mismo o de `shared/`, nunca de otro módulo.

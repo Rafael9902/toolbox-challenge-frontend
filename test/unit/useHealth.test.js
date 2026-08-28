@@ -1,6 +1,6 @@
 import { renderHook, waitFor } from '@testing-library/react'
 
-import { useHealth } from '../../src/modules/files/files.hooks.js'
+import { useHealth } from '../../src/modules/files/hooks/useHealth.js'
 import * as filesApi from '../../src/modules/files/files.api.js'
 
 jest.mock('../../src/modules/files/files.api.js')

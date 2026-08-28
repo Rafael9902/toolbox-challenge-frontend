@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 
 import { ErrorAlert } from '../../src/shared/components/ErrorAlert.jsx'
 import { Loading } from '../../src/shared/components/Loading.jsx'
+import { HealthBadge } from '../../src/modules/files/components/HealthBadge.jsx'
 
 describe('Loading', () => {
   it('exposes an accessible description of what is loading', () => {
@@ -32,5 +33,19 @@ describe('ErrorAlert', () => {
     await userEvent.click(screen.getByRole('button', { name: /retry/i }))
 
     expect(onRetry).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('HealthBadge', () => {
+  it('shows the status it is handed', () => {
+    render(<HealthBadge status="ok" />)
+
+    expect(screen.getByRole('alert')).toHaveTextContent('API status: ok')
+  })
+
+  it('renders whatever status arrives, without deciding what is healthy', () => {
+    render(<HealthBadge status="degraded" />)
+
+    expect(screen.getByText('degraded')).toBeInTheDocument()
   })
 })
