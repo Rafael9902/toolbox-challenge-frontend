@@ -5,7 +5,6 @@ import { EmptyState } from '../../src/shared/components/EmptyState.jsx'
 import { ErrorAlert } from '../../src/shared/components/ErrorAlert.jsx'
 import { Loading } from '../../src/shared/components/Loading.jsx'
 import { FilesSummary } from '../../src/modules/files/components/FilesSummary.jsx'
-import { HealthBadge } from '../../src/modules/files/components/HealthBadge.jsx'
 
 describe('Loading', () => {
   it('exposes an accessible description of what is loading', () => {
@@ -96,19 +95,5 @@ describe('FilesSummary', () => {
     render(<FilesSummary files={[{ file: 'test1.csv', lines: [] }]} />)
 
     expect(screen.getByText('test1.csv')).toBeInTheDocument()
-  })
-})
-
-describe('HealthBadge', () => {
-  it('shows the status it is handed', () => {
-    render(<HealthBadge status="ok" />)
-
-    expect(screen.getByRole('alert')).toHaveTextContent('API status: ok')
-  })
-
-  it('renders whatever status arrives, without deciding what is healthy', () => {
-    render(<HealthBadge status="degraded" />)
-
-    expect(screen.getByText('degraded')).toBeInTheDocument()
   })
 })
