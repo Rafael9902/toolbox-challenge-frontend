@@ -141,3 +141,8 @@ Claude Code, y sirven como documentación de diseño:
 | `node16-constraints` | Versiones compatibles, Webpack + Babel, ESM vs CommonJS |
 | `testing-jest` | Qué se mockea en cada nivel, queries por rol, escenarios obligatorios |
 | `clean-code-solid` | SOLID funcional, JSDoc, commits, patrones descartados |
+
+## Historias de usuario
+
+El backlog completo del proyecto —las 10 historias con criterios de aceptación en Gherkin, estimación
+y chequeo INVEST— está en [`docs/user-stories.md`](docs/user-stories.md).
