@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Tests on NodeJS 16
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up NodeJS
+        uses: actions/setup-node@v4
+        with:
+          # Kept in sync with .nvmrc and package.json engines.
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Report the runtime actually in use
+        run: node -v && npm -v
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      # Runs even when the unit step failed, so one push reports both
+      # categories instead of hiding the second behind the first.
+      - name: Integration tests
+        if: success() || failure()
+        run: npm run test:integration
+
+      # A green suite says nothing about whether the bundle still builds.
+      - name: Production build
+        if: success() || failure()
+        run: npm run build
