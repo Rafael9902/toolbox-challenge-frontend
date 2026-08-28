@@ -8,8 +8,15 @@ on:
 
 jobs:
   test:
-    name: Tests on NodeJS 16
+    name: ${{ matrix.suite }} tests on NodeJS 16
     runs-on: ubuntu-22.04
+
+    strategy:
+      # Each suite reports its own check, so one failing must not cancel the
+      # other: a single push has to report both.
+      fail-fast: false
+      matrix:
+        suite: [unit, integration]
 
     steps:
       - name: Check out the repository
@@ -28,16 +35,27 @@ jobs:
       - name: Report the runtime actually in use
         run: node -v && npm -v
 
-      - name: Unit tests
-        run: npm run test:unit
+      - name: Run the ${{ matrix.suite }} suite
+        run: npm run test:${{ matrix.suite }}
 
-      # Runs even when the unit step failed, so one push reports both
-      # categories instead of hiding the second behind the first.
-      - name: Integration tests
-        if: success() || failure()
-        run: npm run test:integration
+  # A green suite says nothing about whether the bundle still builds, and a
+  # broken build is worth its own check rather than hiding inside the tests.
+  build:
+    name: Production build on NodeJS 16
+    runs-on: ubuntu-22.04
 
-      # A green suite says nothing about whether the bundle still builds.
-      - name: Production build
-        if: success() || failure()
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up NodeJS
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
         run: npm run build
