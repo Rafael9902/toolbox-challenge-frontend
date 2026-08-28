@@ -11,6 +11,12 @@ const mockFetch = (impl) => {
 const respondWith = (body, { ok = true, status = 200 } = {}) =>
   () => Promise.resolve({ ok, status, json: async () => body })
 
+/** The contract of GET /files/data: a bare array, empty `lines` included. */
+const FILES = [
+  { file: 'test3.csv', lines: [{ text: 'g', number: 101382507, hex: '65badd1f29e6235199261cd3026a97f5' }] },
+  { file: 'test1.csv', lines: [] }
+]
+
 describe('App', () => {
   it('renders the shell with the application title', () => {
     mockFetch(() => new Promise(() => {}))
@@ -21,11 +27,21 @@ describe('App', () => {
   })
 
   it('mounts the features inside the centered content area', async () => {
-    mockFetch(respondWith({ status: 'ok' }))
+    mockFetch(respondWith(FILES))
 
     render(<App />)
 
-    expect(screen.getByRole('main')).toContainElement(await screen.findByRole('alert'))
+    expect(screen.getByRole('main')).toContainElement(await screen.findByRole('list'))
+  })
+
+  it('asks the API for the files data once, without being told to', async () => {
+    mockFetch(respondWith(FILES))
+
+    render(<App />)
+
+    await screen.findByText('test3.csv')
+    expect(global.fetch).toHaveBeenCalledTimes(1)
+    expect(global.fetch.mock.calls[0][0]).toBe('http://localhost:3000/files/data')
   })
 
   it('shows a loading indicator while the API is being reached', () => {
@@ -36,13 +52,13 @@ describe('App', () => {
     expect(screen.getByRole('status')).toBeInTheDocument()
   })
 
-  it('shows the API status once the request resolves', async () => {
-    mockFetch(respondWith({ status: 'ok' }))
+  it('shows the files once the request resolves', async () => {
+    mockFetch(respondWith(FILES))
 
     render(<App />)
 
-    expect(await screen.findByText(/api status/i)).toBeInTheDocument()
-    expect(screen.getByText('ok')).toBeInTheDocument()
+    expect(await screen.findByText('test3.csv')).toBeInTheDocument()
+    expect(screen.getByText('1 line')).toBeInTheDocument()
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 
@@ -57,7 +73,7 @@ describe('App', () => {
   })
 
   it('shows an error when the API answers a failing status', async () => {
-    mockFetch(respondWith({}, { ok: false, status: 502 }))
+    mockFetch(respondWith([], { ok: false, status: 502 }))
 
     render(<App />)
 
@@ -68,23 +84,32 @@ describe('App', () => {
     global.fetch = jest
       .fn()
       .mockRejectedValueOnce(new TypeError('Failed to fetch'))
-      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ status: 'ok' }) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => FILES })
 
     render(<App />)
     await userEvent.click(await screen.findByRole('button', { name: /retry/i }))
 
-    expect(await screen.findByText('ok')).toBeInTheDocument()
+    expect(await screen.findByText('test3.csv')).toBeInTheDocument()
     await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(2))
   })
 
-  it('shows the empty state when the API answers with nothing to render', async () => {
-    mockFetch(respondWith({}))
+  it('shows the empty state when the API answers with no files', async () => {
+    mockFetch(respondWith([]))
 
     render(<App />)
 
-    expect(await screen.findByText(/reported no status/i)).toBeInTheDocument()
+    expect(await screen.findByText(/returned no file lines/i)).toBeInTheDocument()
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /retry/i })).not.toBeInTheDocument()
+  })
+
+  it('shows the empty state when every file arrived without lines', async () => {
+    mockFetch(respondWith([{ file: 'test1.csv', lines: [] }, { file: 'test2.csv', lines: [] }]))
+
+    render(<App />)
+
+    expect(await screen.findByText(/returned no file lines/i)).toBeInTheDocument()
+    expect(screen.queryByRole('list')).not.toBeInTheDocument()
   })
 
   it('shows the loading indicator again while the retry is in flight', async () => {
@@ -100,21 +125,21 @@ describe('App', () => {
     expect(screen.getByRole('status')).toBeInTheDocument()
     expect(screen.queryAllByRole('alert')).toHaveLength(0)
 
-    respond({ ok: true, status: 200, json: async () => ({ status: 'ok' }) })
-    expect(await screen.findByText('ok')).toBeInTheDocument()
+    respond({ ok: true, status: 200, json: async () => FILES })
+    expect(await screen.findByText('test3.csv')).toBeInTheDocument()
   })
 
   it('shows one state at a time as the request resolves', async () => {
-    mockFetch(respondWith({ status: 'ok' }))
+    mockFetch(respondWith(FILES))
 
     render(<App />)
 
     expect(screen.getByRole('status')).toBeInTheDocument()
-    expect(screen.queryAllByRole('alert')).toHaveLength(0)
+    expect(screen.queryAllByRole('list')).toHaveLength(0)
 
-    expect(await screen.findByText('ok')).toBeInTheDocument()
+    expect(await screen.findByText('test3.csv')).toBeInTheDocument()
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
-    expect(screen.queryAllByRole('alert')).toHaveLength(1)
+    expect(screen.queryAllByRole('alert')).toHaveLength(0)
   })
 
   it('never leaks the transport error to the user', async () => {

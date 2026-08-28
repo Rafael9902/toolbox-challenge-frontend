@@ -2,9 +2,9 @@
 
 Cliente en React del API del challenge: consume `/files/data` y muestra la información en pantalla.
 
-> **Estado:** esqueleto de la aplicación (`FRONTEND - TASK-001` y `TASK-002`).
-> El consumo de `/files/data` y la tabla de datos corresponden a `TASK-003` y `TASK-004`
-> y todavía no están implementados. Hoy la app renderiza el layout y verifica que el API responde.
+> **Estado:** la app consume `GET /files/data` al montarse (`FRONTEND - TASK-003`) y lista los
+> archivos con la cantidad de líneas que trajo cada uno. La tabla `File Name | Text | Number | Hex`
+> corresponde a `TASK-004` y todavía no está implementada.
 
 ---
 
@@ -36,6 +36,11 @@ Ver el repo `toolbox-challenge-backend`.
 
 No hace falta configurar ninguna variable de entorno: todos los valores están en
 `src/shared/config.js`.
+
+**Cross-origin:** el dev server sirve en `http://localhost:8080` y el API en `http://localhost:3000`,
+así que la petición es cross-origin. Se resuelve **con CORS en el backend**, que responde
+`Access-Control-Allow-Origin: *`; por eso no hay `devServer.proxy` configurado y la URL del API queda
+absoluta en `src/shared/config.js`.
 
 ## Git hooks
 
