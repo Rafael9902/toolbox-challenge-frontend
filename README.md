@@ -179,7 +179,7 @@ procedimiento completo está en esa misma skill.
 |---|---|---|
 | Tests con Jest | **implementado** | `TASK-009` |
 | Redux | **implementado** | `TASK-008` |
-| Filtro por `fileName` | pendiente | `TASK-007` |
+| Filtro por `fileName` | **implementado** | `TASK-007` |
 | Docker | pendiente | `TASK-010` |
 
 Los tests están desde el primer commit, no como un agregado al final: cada TASK entró con los suyos.
@@ -189,8 +189,12 @@ tanda de tests nueva; lo que agregó está en [Tests](#tests).
 Redux entró como **refactor interno**: el comportamiento en pantalla es idéntico al del alcance
 obligatorio, y así es como se validó. El cómo está en [Estado global con Redux](#estado-global-con-redux).
 
-El código está preparado para el filtro: `FilesTable` recibe las filas ya aplanadas, así que filtrar es
-cuestión de acotar el array antes de pasárselo, sin tocar el componente.
+**El filtro es del lado del servidor.** Elegir un archivo dispara
+`GET /files/data?fileName=<archivo>`, así el backend descarga sólo ese archivo en vez de los nueve.
+Acotar el array en memoria habría dado el mismo resultado en pantalla desperdiciando ocho descargas.
+
+Si `GET /files/list` falla, el selector queda deshabilitado y la pantalla sigue mostrando todos los
+datos: la lista es un accesorio y no puede tumbar la vista principal.
 
 ## Arquitectura
 

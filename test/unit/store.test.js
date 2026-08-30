@@ -4,7 +4,7 @@ import { loadFiles } from '../../src/modules/files/files.slice.js'
 describe('createAppStore', () => {
   it('mounts the files slice under its own key', () => {
     expect(createAppStore().getState()).toEqual({
-      files: { data: null, loading: true, error: null }
+      files: { data: null, loading: true, error: null, fileNames: [], selectedFile: '' }
     })
   })
 
@@ -22,6 +22,12 @@ describe('createAppStore', () => {
 
     store.dispatch(loadFiles.fulfilled([], 'request-1'))
 
-    expect(other.getState().files).toEqual({ data: null, loading: true, error: null })
+    expect(other.getState().files).toEqual({
+        data: null,
+        loading: true,
+        error: null,
+        fileNames: [],
+        selectedFile: ''
+      })
   })
 })

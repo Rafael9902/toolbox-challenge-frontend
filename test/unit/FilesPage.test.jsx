@@ -3,8 +3,10 @@ import userEvent from '@testing-library/user-event'
 
 import { FilesPage } from '../../src/modules/files/pages/FilesPage.jsx'
 import { useFilesData } from '../../src/modules/files/hooks/useFilesData.js'
+import { useFileFilter } from '../../src/modules/files/hooks/useFileFilter.js'
 
 jest.mock('../../src/modules/files/hooks/useFilesData.js')
+jest.mock('../../src/modules/files/hooks/useFileFilter.js')
 
 /** Shaped like the API answers: most files arrive with no lines at all. */
 const FILES = [
@@ -28,11 +30,21 @@ const asyncState = (overrides) => ({
   ...overrides
 })
 
-const renderWith = (overrides) => {
+/** Builds the filter result, doubled so the page renders without a store. */
+const filterState = (overrides) => ({
+  fileNames: [],
+  selectedFile: '',
+  selectFile: jest.fn(),
+  ...overrides
+})
+
+const renderWith = (overrides, filterOverrides) => {
   const state = asyncState(overrides)
+  const filter = filterState(filterOverrides)
   useFilesData.mockReturnValue(state)
+  useFileFilter.mockReturnValue(filter)
   render(<FilesPage />)
-  return state
+  return { ...state, filter }
 }
 
 /** How the user recognises each state on screen. */

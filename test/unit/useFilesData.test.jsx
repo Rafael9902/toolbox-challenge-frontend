@@ -2,7 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { Provider } from 'react-redux'
 
 import { useFilesData } from '../../src/modules/files/hooks/useFilesData.js'
-import { loadFiles } from '../../src/modules/files/files.slice.js'
+import { fileSelected, loadFiles } from '../../src/modules/files/files.slice.js'
 import * as filesApi from '../../src/modules/files/files.api.js'
 import { createAppStore } from '../../src/store.js'
 
@@ -106,7 +106,13 @@ describe('useFilesData', () => {
 
     expect(result.current.data).toBeNull()
     expect(result.current.loading).toBe(true)
-    expect(store.getState().files).toEqual({ data: null, loading: true, error: null })
+    expect(store.getState().files).toEqual({
+      data: null,
+      loading: true,
+      error: null,
+      fileNames: [],
+      selectedFile: ''
+    })
   })
 
   it('reads the store instead of keeping a copy of the payload', async () => {
@@ -117,5 +123,64 @@ describe('useFilesData', () => {
 
     expect(result.current.data).toEqual(FILES)
     expect(result.current.loading).toBe(false)
+  })
+})
+
+describe('useFilesData with the filter applied', () => {
+  it('asks for every file while no file is selected', async () => {
+    filesApi.fetchFilesData.mockResolvedValue(FILES)
+
+    const { result } = renderUseFilesData()
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(filesApi.fetchFilesData).toHaveBeenCalledWith(expect.objectContaining({ fileName: '' }))
+  })
+
+  it('asks the API for the selected file, instead of narrowing the payload in memory', async () => {
+    filesApi.fetchFilesData.mockResolvedValue(FILES)
+
+    const { result, store } = renderUseFilesData()
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    await act(async () => { store.dispatch(fileSelected('test3.csv')) })
+
+    await waitFor(() => expect(filesApi.fetchFilesData).toHaveBeenCalledTimes(2))
+    expect(filesApi.fetchFilesData).toHaveBeenLastCalledWith(
+      expect.objectContaining({ fileName: 'test3.csv' })
+    )
+  })
+
+  it('asks for every file again when the selection is cleared', async () => {
+    filesApi.fetchFilesData.mockResolvedValue(FILES)
+
+    const { result, store } = renderUseFilesData()
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    await act(async () => { store.dispatch(fileSelected('test3.csv')) })
+    await act(async () => { store.dispatch(fileSelected('')) })
+
+    await waitFor(() => expect(filesApi.fetchFilesData).toHaveBeenCalledTimes(3))
+    expect(filesApi.fetchFilesData).toHaveBeenLastCalledWith(
+      expect.objectContaining({ fileName: '' })
+    )
+  })
+
+  it('goes back to loading while the filtered request is in flight', async () => {
+    filesApi.fetchFilesData.mockResolvedValueOnce(FILES).mockReturnValueOnce(new Promise(() => {}))
+
+    const { result, store } = renderUseFilesData()
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    await act(async () => { store.dispatch(fileSelected('test3.csv')) })
+
+    expect(result.current.loading).toBe(true)
+    expect(result.current.error).toBeNull()
+  })
+
+  it('aborts the request in flight when the selection changes', async () => {
+    filesApi.fetchFilesData.mockReturnValue(new Promise(() => {}))
+
+    const { store } = renderUseFilesData()
+    const { signal } = filesApi.fetchFilesData.mock.calls[0][0]
+    await act(async () => { store.dispatch(fileSelected('test3.csv')) })
+
+    expect(signal.aborted).toBe(true)
   })
 })

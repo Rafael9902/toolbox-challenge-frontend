@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 
-import { loadFiles, selectFiles } from '../files.slice.js'
+import { loadFiles, selectFiles, selectSelectedFile } from '../files.slice.js'
 
 /**
  * State of a request owned by the store.
@@ -15,7 +15,10 @@ import { loadFiles, selectFiles } from '../files.slice.js'
 
 /**
  * Binds the files slice to the view: reads it with `useSelector` and asks for
- * the data once per attempt with `useDispatch`.
+ * the data once per attempt and per selected file with `useDispatch`.
+ *
+ * The filter is server side: selecting a file re-runs the effect, which asks
+ * the API for that file instead of narrowing the payload in memory.
  *
  * It keeps no copy of the payload — `data`, `loading` and `error` are read
  * straight from the store on every render.
@@ -24,16 +27,17 @@ import { loadFiles, selectFiles } from '../files.slice.js'
  */
 export const useFilesData = () => {
   const { data, loading, error } = useSelector(selectFiles)
+  const selectedFile = useSelector(selectSelectedFile)
   const dispatch = useDispatch()
   const [attempt, setAttempt] = useState(0)
 
   const reload = useCallback(() => setAttempt((n) => n + 1), [])
 
   useEffect(() => {
-    const request = dispatch(loadFiles())
+    const request = dispatch(loadFiles(selectedFile))
 
     return () => request.abort()
-  }, [dispatch, attempt])
+  }, [dispatch, attempt, selectedFile])
 
   return { data, loading, error, reload }
 }
