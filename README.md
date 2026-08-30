@@ -4,13 +4,14 @@ Cliente en React del API del challenge: consume `GET /files/data`, aplana la res
 en una tabla.
 
 > **Estado:** el alcance obligatorio del challenge está completo (`FRONTEND - TASK-001` a `TASK-006`).
-> De los opcionales sólo están los **tests con Jest**; el detalle está en
-> [Puntos opcionales](#puntos-opcionales).
+> De los opcionales están los **tests con Jest** y la **gestión de estado con Redux**; el detalle está
+> en [Puntos opcionales](#puntos-opcionales).
 
 **Índice:** [Requisitos](#requisitos) · [Levantar la app completa](#levantar-la-app-completa) ·
 [Qué se ve en pantalla](#qué-se-ve-en-pantalla) · [Decisiones de diseño](#decisiones-de-diseño) ·
 [Puntos opcionales](#puntos-opcionales) · [Arquitectura](#arquitectura) ·
-[Configuración](#configuración) · [Tests](#tests) · [CI y git hooks](#ci-y-git-hooks)
+[Estado global con Redux](#estado-global-con-redux) · [Configuración](#configuración) ·
+[Tests](#tests) · [CI y git hooks](#ci-y-git-hooks)
 
 ---
 
@@ -118,7 +119,7 @@ una tabla con encabezados y nada debajo.
 | Error | el API no responde o devuelve un status de falla | alerta roja con mensaje claro y botón **Retry** |
 | Vacío | la respuesta llegó pero no hay ninguna línea válida | aviso de que no hay datos |
 
-**Sólo uno de los cuatro estados se muestra a la vez**, incluso cuando el hook tiene datos viejos y una
+**Sólo uno de los cuatro estados se muestra a la vez**, incluso cuando el store tiene datos viejos y una
 petición nueva en vuelo. Es una invariante con tests propios; ver [Tests](#tests).
 
 Si al abrir la app ves el estado de error, lo más probable es que **el backend no esté levantado**.
@@ -136,7 +137,7 @@ Si al abrir la app ves el estado de error, lo más probable es que **el backend 
   los cuatro configs de una.
 - **Jest, no Vitest.** El punto opcional del enunciado nombra Jest.
 - **CSS extraído en producción** con `mini-css-extract-plugin`. Sin él, los 227 KB de Bootstrap viajan
-  dentro del bundle de JS y no se pueden cachear aparte. Con él, el build emite `main.[hash].js` (178 KB)
+  dentro del bundle de JS y no se pueden cachear aparte. Con él, el build emite `main.[hash].js` (204 KB)
   y `main.[hash].css` (227 KB) por separado. En desarrollo el CSS sigue inline, para que funcione el HMR.
 
 ### Aplicación
@@ -145,9 +146,11 @@ Si al abrir la app ves el estado de error, lo más probable es que **el backend 
   `Access-Control-Allow-Origin: *`, así que la app apunta a la URL absoluta. La alternativa —`devServer.proxy`
   y una baseUrl relativa— sólo funciona mientras el dev server esté en el medio, y deja de servir en
   cuanto el bundle se sirve como estático.
-- **Sin Redux y sin router.** Hay una pantalla y un hook: Redux es un punto opcional con su propia
-  tarjeta, y un router no tendría ninguna ruta que resolver. `pages/` distingue la vista *conectada* de
-  los componentes presentacionales, no implica routing.
+- **Con Redux, y sin router.** Redux está porque **es un punto opcional explícito del enunciado**, no
+  porque una pantalla y un hook lo pidieran; la sección [Estado global con Redux](#estado-global-con-redux)
+  cuenta cómo se implementó sin que se vuelva ceremonia. Un router, en cambio, no tendría ninguna ruta
+  que resolver: `pages/` distingue la vista *conectada* de los componentes presentacionales, no implica
+  routing.
 - **El aplanado vive en una función pura**, `toFileRows.js`, fuera del componente. Recibe
   `[{ file, lines }]` y devuelve filas planas, así se testea sin renderizar nada y la tabla sólo se
   ocupa de mostrar.
@@ -165,18 +168,26 @@ Si al abrir la app ves el estado de error, lo más probable es que **el backend 
 hay un `overrides` para `@testing-library/dom`, que npm resolvía a una 10.x incompatible aunque React
 Testing Library 14 declara `^9.0.0`. El detalle está en `.claude/skills/node16-constraints/`.
 
+El árbol de Redux —`@reduxjs/toolkit@2`, `react-redux@9`, `redux@5`— **no** hubo que caparlo: ninguno
+declara `engines`, así que se verificó a mano (instalación sin `EBADENGINE`, `require()` en Node 16,
+mapa de `exports` para que Jest resuelva el CJS, y `npm test` + `npm run build` en `v16.20.2`). El
+procedimiento completo está en esa misma skill.
+
 ## Puntos opcionales
 
 | Punto opcional | Estado | Tarjeta |
 |---|---|---|
 | Tests con Jest | **implementado** | `TASK-009` |
+| Redux | **implementado** | `TASK-008` |
 | Filtro por `fileName` | pendiente | `TASK-007` |
-| Redux | pendiente | `TASK-008` |
 | Docker | pendiente | `TASK-010` |
 
 Los tests están desde el primer commit, no como un agregado al final: cada TASK entró con los suyos.
 `TASK-009` fue una **auditoría** de esa suite contra los escenarios que exige el enunciado, no una
 tanda de tests nueva; lo que agregó está en [Tests](#tests).
+
+Redux entró como **refactor interno**: el comportamiento en pantalla es idéntico al del alcance
+obligatorio, y así es como se validó. El cómo está en [Estado global con Redux](#estado-global-con-redux).
 
 El código está preparado para el filtro: `FilesTable` recibe las filas ya aplanadas, así que filtrar es
 cuestión de acotar el array antes de pasárselo, sin tocar el componente.
@@ -187,14 +198,16 @@ Modular por feature, con el mismo criterio que el backend. Cada módulo expone s
 
 ```
 src/
-├── index.jsx                       # entry point: monta React y carga el CSS de Bootstrap
+├── index.jsx                       # entry point: monta React, provee el store y carga el CSS
 ├── App.jsx                         # compone el shell con las features
+├── store.js                        # arma el store con un slice por feature
 ├── modules/
 │   └── files/
-│       ├── index.js                # barril: API pública del módulo (sólo la página)
+│       ├── index.js                # barril: API pública del módulo (la página y el reducer)
 │       ├── files.api.js            # única capa que habla HTTP
+│       ├── files.slice.js          # estado global de la feature: thunk, reducers, selector
 │       ├── toFileRows.js           # función pura: [{ file, lines }] -> filas planas
-│       ├── hooks/useFilesData.js   # estado y efectos; devuelve datos planos
+│       ├── hooks/useFilesData.js   # efectos y lectura del store; devuelve datos planos
 │       ├── components/FilesTable.jsx  # presentacional: recibe filas, no pide nada
 │       └── pages/FilesPage.jsx     # vista conectada: cablea el hook con los componentes
 └── shared/
@@ -204,15 +217,54 @@ src/
     └── components/                 # Layout, Loading, ErrorAlert, EmptyState
 ```
 
-**Reglas de capa:** la página pregunta, el hook orquesta, el api trae, el componente muestra. Un
-componente nunca llama a `fetch` ni a un hook de datos; un hook nunca devuelve JSX; `files.api.js` nunca
-conoce React.
+**Reglas de capa:** la página pregunta, el hook orquesta, el slice guarda, el api trae, el componente
+muestra. Un componente nunca llama a `fetch` ni a un hook de datos; un hook nunca devuelve JSX;
+`files.api.js` y `files.slice.js` nunca conocen React.
 
 **Encapsulación:** un módulo declara su API pública en `index.js`. `App.jsx` nunca importa un archivo
 interno de una feature, y un módulo sólo puede importar de sí mismo o de `shared/`, nunca de otro módulo.
 
 **Programación funcional, sin clases.** Componentes función y hooks, que es requisito explícito del
 challenge: no hay `class`, ni `this`, ni `componentDidMount`.
+
+## Estado global con Redux
+
+Redux está porque el enunciado lo lista como punto opcional, **no porque una pantalla y un hook lo
+pidieran**. Dicho eso, un store mal hecho sobre un solo hook se lee como sobreingeniería, así que la
+implementación se acotó a lo que el criterio pide y nada más:
+
+| Pieza | Dónde | Qué hace |
+|---|---|---|
+| Store | `src/store.js` | `configureStore` con un slice por feature. Es una **factory**, no una instancia global |
+| `<Provider>` | `src/index.jsx` | provee el store desde la raíz, antes de `<App />` |
+| Slice | `src/modules/files/files.slice.js` | estado inicial, thunk, reducers y selector de la feature |
+| Binding | `src/modules/files/hooks/useFilesData.js` | `useSelector` + `useDispatch`, y el efecto que pide los datos |
+
+El estado global es exactamente el que la pantalla necesita:
+
+```js
+{ files: { data: null, loading: true, error: null } }
+```
+
+**Una petición, tres acciones.** `createAsyncThunk` despacha `files/load/pending` al empezar y
+`files/load/fulfilled` o `files/load/rejected` al terminar; los reducers escriben con los drafts de
+Immer, así que cada transición devuelve un objeto nuevo sin mutar el anterior:
+
+| Acción | Efecto en el estado |
+|---|---|
+| `pending` | `loading: true`, `error: null`, y **conserva** los datos que ya estaban en pantalla |
+| `fulfilled` | `loading: false`, `data` reemplazado por el payload |
+| `rejected` | `loading: false`, `error` con el mensaje ya traducido por `httpClient` |
+| `rejected` con `meta.aborted` | **nada**: es el cleanup del efecto que la inició, no una falla |
+
+**Qué NO cambió, que es el punto de la tarjeta.** `FilesPage`, `FilesTable`, `toFileRows` y el `.api.js`
+quedaron intactos: el hook sigue devolviendo `{ data, loading, error, reload }`, sólo que ahora lo lee
+del store en vez de tenerlo en `useState`. La pantalla se comporta igual, y sus tests —incluida la tabla
+de exclusividad de estados— pasaron sin tocarse.
+
+**Lo que se decidió no hacer:** ni RTK Query, ni sagas, ni middlewares propios, ni entity adapters, ni
+un `store/` global con carpetas `actions/`, `reducers/` y `types/`. El slice vive dentro de la feature y
+el store sólo lo compone.
 
 ## Configuración
 
@@ -230,7 +282,7 @@ Si el backend corre en otro puerto, se cambia ahí.
 cada test arranca con un `fetch` que se niega a ejecutarse (ver [Sin red real](#sin-red-real)).
 
 ```bash
-npm test                 # 84 tests, 8 suites
+npm test                 # 103 tests, 10 suites
 npm run test:unit        # sólo test/unit
 npm run test:integration # sólo test/integration
 ```
@@ -243,19 +295,21 @@ test/
 ├── unit/                 # piezas aisladas
 │   ├── networkGuard.test.js  # que el guard bloquea y que no se filtra entre tests
 │   ├── httpClient.test.js    # traducción de fallas de red y de status a ApiError
-│   ├── useFilesData.test.js  # ciclo de la petición, cancelación, reintento
+│   ├── filesSlice.test.js    # cada transición del reducer, sin renderizar nada
+│   ├── store.test.js         # el store monta el slice y dos instancias no se pisan
+│   ├── useFilesData.test.jsx # ciclo de la petición, cancelación, reintento
 │   ├── toFileRows.test.js    # el aplanado y la unicidad de las keys
 │   ├── components.test.jsx   # Loading, ErrorAlert, FilesTable con props fijas
 │   ├── layout.test.jsx       # grid responsive y ausencia de CSS propio
 │   └── FilesPage.test.jsx    # los cuatro estados y su exclusividad
 └── integration/
-    └── App.test.jsx          # la app completa con fetch mockeado
+    └── App.test.jsx          # la app completa, con su propio store y fetch mockeado
 ```
 
 Las consultas van **por rol y por texto accesible** (`getByRole('table')`, `getByRole('alert')`), nunca
 por clases de Bootstrap: así un cambio de estilo no rompe los tests.
 
-Dos tests merecen mención porque cuidan invariantes en vez de features:
+Tres tests merecen mención porque cuidan invariantes en vez de features:
 
 - **Exclusividad de estados.** Una tabla de escenarios recorre cada combinación que el hook puede
   devolver —incluidos "reintento en vuelo sobre una falla previa" y "falla que llega sobre datos ya
@@ -263,6 +317,12 @@ Dos tests merecen mención porque cuidan invariantes en vez de features:
 - **La `key` no es el índice.** Se verifica inspeccionando el elemento React, no el DOM, porque el DOM
   no expone las keys. El camino intuitivo —espiar el warning de React— no sirve: React deduplica ese
   warning por componente, así que el test pasaría aun sin keys.
+- **Ningún estado cruza de un test al siguiente.** El store es una factory y cada test crea el suyo, por
+  la misma razón por la que existe el guard de red: un doble compartido hace pasar tests por el motivo
+  equivocado.
+
+Los reducers se testean **sin renderizar** —son funciones puras— y con los creadores que genera
+`createAsyncThunk`, para que el `meta` de cada acción sea el real y no una suposición del test.
 
 ### Sin red real
 
@@ -316,11 +376,11 @@ Code, y sirven como documentación de diseño:
 
 | Skill | Cubre |
 |---|---|
-| `feature-module` | Capas de un módulo, encapsulación, reglas de import |
+| `feature-module` | Capas de un módulo, dónde vive el store, encapsulación, reglas de import |
 | `react-patterns` | Componentes funcionales, efectos, cancelación, accesibilidad |
 | `node16-constraints` | Versiones compatibles, Webpack + Babel, ESM vs CommonJS |
-| `testing-jest` | Qué se mockea en cada nivel, queries por rol, escenarios obligatorios |
-| `clean-code-solid` | SOLID funcional, JSDoc, commits, patrones descartados |
+| `testing-jest` | Qué se mockea en cada nivel, reducers sin render, escenarios obligatorios |
+| `clean-code-solid` | SOLID funcional, JSDoc, commits, por qué Redux está y qué se descartó |
 
 ## Historias de usuario
 

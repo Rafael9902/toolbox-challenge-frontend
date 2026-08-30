@@ -51,6 +51,20 @@ useEffect(() => {
 Sin ese cleanup React avisa con "state update on an unmounted component", y peor: una respuesta vieja
 puede pisar a una nueva.
 
+Con el store de Redux Toolkit el efecto es el mismo con otras piezas: el `AbortController` lo pone el
+thunk, y el cleanup se llama sobre la promesa que devuelve `dispatch`.
+
+```js
+useEffect(() => {
+  const request = dispatch(loadFiles())
+
+  return () => request.abort()
+}, [dispatch, attempt])
+```
+
+El abort cancela el `fetch` y despacha `rejected` con `meta.aborted`, que el reducer ignora: es el
+cleanup del propio efecto, no una falla que mostrarle al usuario.
+
 ## Recargar sin trampas
 
 Para reintentar, cambiá una dependencia del efecto en lugar de extraer la función y llamarla a mano:
