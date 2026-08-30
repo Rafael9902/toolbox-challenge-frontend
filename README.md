@@ -4,7 +4,8 @@ Cliente en React del API del challenge: consume `GET /files/data`, aplana la res
 en una tabla.
 
 > **Estado:** el alcance obligatorio del challenge está completo (`FRONTEND - TASK-001` a `TASK-006`).
-> Los puntos opcionales siguen pendientes; el detalle está en [Puntos opcionales](#puntos-opcionales).
+> De los opcionales sólo están los **tests con Jest**; el detalle está en
+> [Puntos opcionales](#puntos-opcionales).
 
 **Índice:** [Requisitos](#requisitos) · [Levantar la app completa](#levantar-la-app-completa) ·
 [Qué se ve en pantalla](#qué-se-ve-en-pantalla) · [Decisiones de diseño](#decisiones-de-diseño) ·
@@ -166,15 +167,16 @@ Testing Library 14 declara `^9.0.0`. El detalle está en `.claude/skills/node16-
 
 ## Puntos opcionales
 
-Ninguno de los tres del frontend está implementado; el alcance entregado es el obligatorio completo.
-
 | Punto opcional | Estado | Tarjeta |
 |---|---|---|
+| Tests con Jest | **implementado** | `TASK-009` |
 | Filtro por `fileName` | pendiente | `TASK-007` |
 | Redux | pendiente | `TASK-008` |
 | Docker | pendiente | `TASK-010` |
 
-Los tests con **Jest** —que el enunciado lista como opcional— sí están, desde el primer commit.
+Los tests están desde el primer commit, no como un agregado al final: cada TASK entró con los suyos.
+`TASK-009` fue una **auditoría** de esa suite contra los escenarios que exige el enunciado, no una
+tanda de tests nueva; lo que agregó está en [Tests](#tests).
 
 El código está preparado para el filtro: `FilesTable` recibe las filas ya aplanadas, así que filtrar es
 cuestión de acotar el array antes de pasárselo, sin tocar el componente.
@@ -224,20 +226,22 @@ Si el backend corre en otro puerto, se cambia ahí.
 
 ## Tests
 
-**Jest + React Testing Library**, sobre jsdom. La suite corre **sin red real**: `fetch` está mockeado en
-todos los niveles.
+**Jest + React Testing Library**, sobre jsdom. La suite corre **sin red real**, y no por convención:
+cada test arranca con un `fetch` que se niega a ejecutarse (ver [Sin red real](#sin-red-real)).
 
 ```bash
-npm test                 # 77 tests, 7 suites
+npm test                 # 84 tests, 8 suites
 npm run test:unit        # sólo test/unit
 npm run test:integration # sólo test/integration
 ```
 
 ```
 test/
-├── setup.js              # carga los matchers de @testing-library/jest-dom
+├── setup.js              # matchers de jest-dom + instalación del guard de red
+├── networkGuard.js       # el doble de fetch que bloquea cualquier request real
 ├── styleMock.js          # los imports de CSS que Jest no necesita interpretar
 ├── unit/                 # piezas aisladas
+│   ├── networkGuard.test.js  # que el guard bloquea y que no se filtra entre tests
 │   ├── httpClient.test.js    # traducción de fallas de red y de status a ApiError
 │   ├── useFilesData.test.js  # ciclo de la petición, cancelación, reintento
 │   ├── toFileRows.test.js    # el aplanado y la unicidad de las keys
@@ -260,6 +264,22 @@ Dos tests merecen mención porque cuidan invariantes en vez de features:
   no expone las keys. El camino intuitivo —espiar el warning de React— no sirve: React deduplica ese
   warning por componente, así que el test pasaría aun sin keys.
 
+### Sin red real
+
+Mockear `fetch` test por test es una convención, y una convención no es una garantía. Dejaba dos
+agujeros reales, ambos verificados antes de taparlos:
+
+- `clearMocks` limpia las **llamadas** de un mock, no su implementación. Un test que se olvidaba de
+  mockear heredaba en silencio la respuesta que había dejado el test anterior del mismo archivo, y
+  pasaba por la razón equivocada.
+- Bajo jsdom, un `fetch` sin mockear es `undefined`, y `getJson` traduce **cualquier** falla de
+  transporte a "The API is unreachable". Así que un test que se olvidara de mockear y afirmara el
+  estado de error pasaba en verde sin haber mockeado nada.
+
+`test/setup.js` instala en cada test un doble que tira, y que además **registra el intento**: un
+`afterEach` falla el test aunque el código bajo prueba se haya comido la excepción. Un test olvidadizo
+ahora falla con `The test reached the network instead of a double: <URL>`.
+
 ## CI y git hooks
 
 En cada push a `main` y en cada pull request, GitHub Actions corre sobre **NodeJS 16**
@@ -269,10 +289,15 @@ En cada push a `main` y en cada pull request, GitHub Actions corre sobre **NodeJ
 |---|---|
 | `unit tests on NodeJS 16` | `npm run test:unit` |
 | `integration tests on NodeJS 16` | `npm run test:integration` |
+| `npm test on NodeJS 16` | `env -i "PATH=$PATH" "HOME=$HOME" npm test` |
 | `Production build on NodeJS 16` | `npm run build` |
 
 Cada uno reporta su propio check, y ninguno cancela al otro, para ver cuál falló sin abrir el log. El
 build va aparte porque **una suite verde no dice nada sobre si el bundle sigue compilando**.
+
+El check de `npm test` corre el comando exacto que ejecuta el evaluador, con el entorno lavado: es lo
+que garantiza que la suite entera termina en **exit code 0** sin ninguna variable definida. Afirmarlo
+desde adentro de la suite sólo probaría que la suite se prueba a sí misma.
 
 `npm install` instala los hooks vía husky (script `prepare`):
 
