@@ -1,7 +1,17 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { Provider } from 'react-redux'
 
 import { App } from '../../src/App.jsx'
+import { createAppStore } from '../../src/store.js'
+
+/** Mounts the app over its own store, the way `src/index.jsx` provides one. */
+const renderApp = () =>
+  render(
+    <Provider store={createAppStore()}>
+      <App />
+    </Provider>
+  )
 
 /** Builds a fetch double, so the test never touches the network. */
 const mockFetch = (impl) => {
@@ -35,7 +45,7 @@ describe('App', () => {
   it('renders the shell with the application title', () => {
     mockFetch(() => new Promise(() => {}))
 
-    render(<App />)
+    renderApp()
 
     expect(screen.getByText('React Test App')).toBeInTheDocument()
   })
@@ -43,7 +53,7 @@ describe('App', () => {
   it('mounts the features inside the centered content area', async () => {
     mockFetch(respondWith(FILES))
 
-    render(<App />)
+    renderApp()
 
     expect(screen.getByRole('main')).toContainElement(await screen.findByRole('table'))
   })
@@ -51,7 +61,7 @@ describe('App', () => {
   it('asks the API for the files data once, without being told to', async () => {
     mockFetch(respondWith(FILES))
 
-    render(<App />)
+    renderApp()
 
     await screen.findByRole('table')
     expect(global.fetch).toHaveBeenCalledTimes(1)
@@ -61,7 +71,7 @@ describe('App', () => {
   it('shows a loading indicator while the API is being reached', () => {
     mockFetch(() => new Promise(() => {}))
 
-    render(<App />)
+    renderApp()
 
     expect(screen.getByRole('status')).toBeInTheDocument()
   })
@@ -69,7 +79,7 @@ describe('App', () => {
   it('shows the files in a table once the request resolves', async () => {
     mockFetch(respondWith(FILES))
 
-    render(<App />)
+    renderApp()
 
     const table = await screen.findByRole('table')
     expect(within(table).getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual([
@@ -84,7 +94,7 @@ describe('App', () => {
   it('flattens the lines of every file into rows of the same table', async () => {
     mockFetch(respondWith(FILES))
 
-    render(<App />)
+    renderApp()
 
     const table = await screen.findByRole('table')
     expect(within(table).getAllByRole('row')).toHaveLength(4)
@@ -95,7 +105,7 @@ describe('App', () => {
   it('renders no row for the files that arrived without lines', async () => {
     mockFetch(respondWith(FILES))
 
-    render(<App />)
+    renderApp()
 
     await screen.findByRole('table')
     expect(screen.queryByText('test1.csv')).not.toBeInTheDocument()
@@ -105,7 +115,7 @@ describe('App', () => {
   it('shows an actionable error when the API is unreachable', async () => {
     mockFetch(() => Promise.reject(new TypeError('Failed to fetch')))
 
-    render(<App />)
+    renderApp()
 
     const alert = await screen.findByRole('alert')
     expect(alert).toHaveTextContent(/unreachable/i)
@@ -115,7 +125,7 @@ describe('App', () => {
   it('shows an error when the API answers a failing status', async () => {
     mockFetch(respondWith([], { ok: false, status: 502 }))
 
-    render(<App />)
+    renderApp()
 
     expect(await screen.findByRole('alert')).toHaveTextContent('502')
   })
@@ -126,7 +136,7 @@ describe('App', () => {
       .mockRejectedValueOnce(new TypeError('Failed to fetch'))
       .mockResolvedValueOnce({ ok: true, status: 200, json: async () => FILES })
 
-    render(<App />)
+    renderApp()
     await userEvent.click(await screen.findByRole('button', { name: /retry/i }))
 
     expect(await screen.findByRole('table')).toBeInTheDocument()
@@ -136,7 +146,7 @@ describe('App', () => {
   it('shows the empty state when the API answers with no files', async () => {
     mockFetch(respondWith([]))
 
-    render(<App />)
+    renderApp()
 
     expect(await screen.findByText(/returned no file lines/i)).toBeInTheDocument()
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
@@ -146,7 +156,7 @@ describe('App', () => {
   it('shows the empty state when every file arrived without lines', async () => {
     mockFetch(respondWith([{ file: 'test1.csv', lines: [] }, { file: 'test2.csv', lines: [] }]))
 
-    render(<App />)
+    renderApp()
 
     expect(await screen.findByText(/returned no file lines/i)).toBeInTheDocument()
     expect(screen.queryByRole('table')).not.toBeInTheDocument()
@@ -159,7 +169,7 @@ describe('App', () => {
       .mockRejectedValueOnce(new TypeError('Failed to fetch'))
       .mockImplementationOnce(() => new Promise((resolve) => { respond = resolve }))
 
-    render(<App />)
+    renderApp()
     await userEvent.click(await screen.findByRole('button', { name: /retry/i }))
 
     expect(screen.getByRole('status')).toBeInTheDocument()
@@ -172,7 +182,7 @@ describe('App', () => {
   it('shows one state at a time as the request resolves', async () => {
     mockFetch(respondWith(FILES))
 
-    render(<App />)
+    renderApp()
 
     expect(screen.getByRole('status')).toBeInTheDocument()
     expect(screen.queryAllByRole('table')).toHaveLength(0)
@@ -185,7 +195,7 @@ describe('App', () => {
   it('never leaks the transport error to the user', async () => {
     mockFetch(() => Promise.reject(new TypeError('ECONNREFUSED 127.0.0.1:3000')))
 
-    render(<App />)
+    renderApp()
 
     const alert = await screen.findByRole('alert')
     expect(alert).not.toHaveTextContent('ECONNREFUSED')

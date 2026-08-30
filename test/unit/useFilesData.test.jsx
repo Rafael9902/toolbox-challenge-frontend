@@ -1,7 +1,10 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
+import { Provider } from 'react-redux'
 
 import { useFilesData } from '../../src/modules/files/hooks/useFilesData.js'
+import { loadFiles } from '../../src/modules/files/files.slice.js'
 import * as filesApi from '../../src/modules/files/files.api.js'
+import { createAppStore } from '../../src/store.js'
 
 jest.mock('../../src/modules/files/files.api.js')
 
@@ -10,11 +13,19 @@ const FILES = [
   { file: 'test1.csv', lines: [] }
 ]
 
+/** Mounts the hook over its own store, the way the app provides one. */
+const renderUseFilesData = () => {
+  const store = createAppStore()
+  const wrapper = ({ children }) => <Provider store={store}>{children}</Provider>
+
+  return { store, ...renderHook(() => useFilesData(), { wrapper }) }
+}
+
 describe('useFilesData', () => {
   it('starts in a loading state', () => {
     filesApi.fetchFilesData.mockReturnValue(new Promise(() => {}))
 
-    const { result } = renderHook(() => useFilesData())
+    const { result } = renderUseFilesData()
 
     expect(result.current.loading).toBe(true)
     expect(result.current.data).toBeNull()
@@ -24,7 +35,7 @@ describe('useFilesData', () => {
   it('exposes the payload once the request resolves', async () => {
     filesApi.fetchFilesData.mockResolvedValue(FILES)
 
-    const { result } = renderHook(() => useFilesData())
+    const { result } = renderUseFilesData()
 
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.data).toEqual(FILES)
@@ -34,7 +45,7 @@ describe('useFilesData', () => {
   it('keeps the files whose lines came empty, instead of dropping them', async () => {
     filesApi.fetchFilesData.mockResolvedValue([{ file: 'test1.csv', lines: [] }])
 
-    const { result } = renderHook(() => useFilesData())
+    const { result } = renderUseFilesData()
 
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.data).toEqual([{ file: 'test1.csv', lines: [] }])
@@ -43,7 +54,7 @@ describe('useFilesData', () => {
   it('exposes the error message when the request fails', async () => {
     filesApi.fetchFilesData.mockRejectedValue(new Error('The API is unreachable. Is it running?'))
 
-    const { result } = renderHook(() => useFilesData())
+    const { result } = renderUseFilesData()
 
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.error).toBe('The API is unreachable. Is it running?')
@@ -53,7 +64,7 @@ describe('useFilesData', () => {
   it('requests once per mount, not on every render', async () => {
     filesApi.fetchFilesData.mockResolvedValue(FILES)
 
-    const { rerender, result } = renderHook(() => useFilesData())
+    const { rerender, result } = renderUseFilesData()
     await waitFor(() => expect(result.current.loading).toBe(false))
     rerender()
 
@@ -65,7 +76,7 @@ describe('useFilesData', () => {
       .mockRejectedValueOnce(new Error('The API is unreachable. Is it running?'))
       .mockResolvedValueOnce(FILES)
 
-    const { result } = renderHook(() => useFilesData())
+    const { result } = renderUseFilesData()
     await waitFor(() => expect(result.current.error).not.toBeNull())
 
     act(() => result.current.reload())
@@ -78,7 +89,7 @@ describe('useFilesData', () => {
   it('aborts the in-flight request when unmounted', () => {
     filesApi.fetchFilesData.mockReturnValue(new Promise(() => {}))
 
-    const { unmount } = renderHook(() => useFilesData())
+    const { unmount } = renderUseFilesData()
     const { signal } = filesApi.fetchFilesData.mock.calls[0][0]
     unmount()
 
@@ -89,11 +100,22 @@ describe('useFilesData', () => {
     let respond
     filesApi.fetchFilesData.mockReturnValue(new Promise((resolve) => { respond = resolve }))
 
-    const { result, unmount } = renderHook(() => useFilesData())
+    const { result, store, unmount } = renderUseFilesData()
     unmount()
     await act(async () => { respond(FILES) })
 
     expect(result.current.data).toBeNull()
     expect(result.current.loading).toBe(true)
+    expect(store.getState().files).toEqual({ data: null, loading: true, error: null })
+  })
+
+  it('reads the store instead of keeping a copy of the payload', async () => {
+    filesApi.fetchFilesData.mockReturnValue(new Promise(() => {}))
+
+    const { result, store } = renderUseFilesData()
+    await act(async () => { store.dispatch(loadFiles.fulfilled(FILES, 'request-1')) })
+
+    expect(result.current.data).toEqual(FILES)
+    expect(result.current.loading).toBe(false)
   })
 })

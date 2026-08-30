@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 
-import * as filesApi from '../files.api.js'
+import { loadFiles, selectFiles } from '../files.slice.js'
 
 /**
- * State of a request owned by a hook.
+ * State of a request owned by the store.
  *
  * @typedef  {Object} AsyncState
  * @property {*}        data     Payload once it arrived, otherwise null.
@@ -13,41 +14,26 @@ import * as filesApi from '../files.api.js'
  */
 
 /**
- * Loads the files data on mount, once per attempt.
+ * Binds the files slice to the view: reads it with `useSelector` and asks for
+ * the data once per attempt with `useDispatch`.
  *
- * Owns the request lifecycle and exposes plain state: it renders nothing and
- * knows no JSX.
+ * It keeps no copy of the payload — `data`, `loading` and `error` are read
+ * straight from the store on every render.
  *
  * @returns {AsyncState} `data` holds `FileData[]` once the request resolves.
  */
 export const useFilesData = () => {
-  const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const { data, loading, error } = useSelector(selectFiles)
+  const dispatch = useDispatch()
   const [attempt, setAttempt] = useState(0)
 
   const reload = useCallback(() => setAttempt((n) => n + 1), [])
 
   useEffect(() => {
-    const controller = new AbortController()
+    const request = dispatch(loadFiles())
 
-    setLoading(true)
-    setError(null)
-
-    filesApi
-      .fetchFilesData({ signal: controller.signal })
-      .then((files) => setData(files))
-      .catch((failure) => {
-        // The abort is the cleanup of this very effect, not a failure.
-        if (failure.name === 'AbortError') return
-        setError(failure.message)
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false)
-      })
-
-    return () => controller.abort()
-  }, [attempt])
+    return () => request.abort()
+  }, [dispatch, attempt])
 
   return { data, loading, error, reload }
 }
