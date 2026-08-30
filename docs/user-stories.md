@@ -339,7 +339,8 @@ Opcionales: HU-FE-07 (filtro por fileName) · HU-FE-08 (Redux) · HU-FE-09 (Jest
 
 - **Dado** el `Dockerfile`, **Cuando** construyo la imagen, **Entonces** usa una imagen base de NodeJS 16 y la build finaliza sin errores.
 - **Dado** la imagen construida, **Cuando** ejecuto el contenedor, **Entonces** la app es accesible desde el navegador en el puerto publicado.
-- **Dado** `docker compose up`, **Cuando** se levantan ambos servicios, **Entonces** el frontend resuelve la URL del API por el nombre del servicio del backend y muestra los datos.
+- **Dado** `docker compose up`, **Cuando** se levantan ambos servicios, **Entonces** la app abre en `http://localhost:8080` y muestra los datos que sirve el API.
+  > Corrección sobre la suposición original: el bundle es estático y su JavaScript **corre en el navegador**, no en el contenedor. Por eso alcanza `localhost:3000` de la máquina anfitriona y **no** necesita resolver el API por el nombre del servicio de Compose. Lo único que hace falta es que el API publique su puerto.
 - **Dado** el README, **Cuando** lo leo, **Entonces** documenta los comandos de build y run.
 - **Dado** el contenedor, **Cuando** arranca, **Entonces** no requiere variables de entorno definidas por el evaluador.
 

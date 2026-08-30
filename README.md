@@ -180,7 +180,7 @@ procedimiento completo está en esa misma skill.
 | Tests con Jest | **implementado** | `TASK-009` |
 | Redux | **implementado** | `TASK-008` |
 | Filtro por `fileName` | **implementado** | `TASK-007` |
-| Docker | pendiente | `TASK-010` |
+| Docker | **implementado** | `TASK-010` |
 
 Los tests están desde el primer commit, no como un agregado al final: cada TASK entró con los suyos.
 `TASK-009` fue una **auditoría** de esa suite contra los escenarios que exige el enunciado, no una
@@ -195,6 +195,37 @@ Acotar el array en memoria habría dado el mismo resultado en pantalla desperdic
 
 Si `GET /files/list` falla, el selector queda deshabilitado y la pantalla sigue mostrando todos los
 datos: la lista es un accesorio y no puede tumbar la vista principal.
+
+## Docker
+
+La app se puede levantar sin instalar NodeJS:
+
+```bash
+docker build -t toolbox-web .
+docker run --rm -p 8080:80 toolbox-web
+```
+
+El `Dockerfile` es **multi-stage**: NodeJS 16 sólo construye el bundle y no viaja en la imagen final,
+que es un `nginx:alpine` sirviendo estáticos. Son **95 MB** contra los 200 MB que ocuparía llevar
+NodeJS al runtime.
+
+`nginx.conf` hace dos cosas: `try_files` para que cualquier ruta caiga en `index.html` —lo mismo que
+`historyApiFallback` en el dev server— y cache de un año para los assets hasheados, que nunca cambian
+bajo el mismo nombre, sin cachear `index.html`.
+
+### Las dos apps juntas
+
+El `docker-compose.yml` vive en el repo del **backend** y construye este desde el directorio hermano,
+así que los dos repos tienen que estar clonados uno al lado del otro:
+
+```bash
+cd ../toolbox-challenge-backend
+docker compose up --build      # API en :3000, app en :8080
+```
+
+**El bundle es estático y su JavaScript corre en el navegador, no en el contenedor.** Por eso alcanza
+el API en `localhost:3000` de tu máquina y no necesita resolverlo por el nombre del servicio de
+Compose: sólo hace falta que el API publique su puerto.
 
 ## Arquitectura
 
