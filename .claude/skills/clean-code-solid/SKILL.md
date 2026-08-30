@@ -79,8 +79,33 @@ El `pre-commit` corre `npm run test:unit`. Para saltear ambos hooks: `git commit
 - **Custom hook** → aísla estado y efectos de la presentación.
 - **Barril por módulo** → declara la superficie pública de la feature.
 - **Cliente HTTP en `shared`** → un solo lugar traduce fallas de red a errores tipados.
+- **Store de Redux Toolkit** → **entró por el enunciado, no por el tamaño del estado**. Ver abajo.
 
-Tres. No hacen falta más.
+Cuatro. No hacen falta más.
+
+## Redux: por qué está, y qué lo mantiene honesto
+
+Redux **es un punto opcional explícito del challenge** (`TASK-008` / HU-FE-08), así que implementarlo
+suma puntaje. Esa —y no el tamaño del estado— es la razón por la que está. Una pantalla y un hook no
+piden un store: si el criterio fuera sólo técnico, no estaría.
+
+**No lo saques "simplificando".** Si te parece sobreingeniería, tenés razón en lo técnico y estás
+equivocado en lo contractual: el enunciado lo pide. Está acá deliberadamente y con esta nota para que
+una sesión futura no lo "corrija".
+
+Lo que sí se negocia es **cómo**, y ahí sigue mandando la simplicidad:
+
+- **Un slice por feature**, en el módulo (`files.slice.js`), no un `store/` global con carpetas por
+  tipo de archivo (`actions/`, `reducers/`, `types/`). El store sólo compone lo que cada feature expone.
+- **Redux Toolkit, no Redux a mano.** `createSlice` + `createAsyncThunk` dan las tres acciones
+  (inicio / éxito / error) y la inmutabilidad vía Immer sin constantes de tipo ni `switch`.
+- **Sin ceremonia adicional:** nada de sagas, observables, middlewares propios, estado normalizado ni
+  entity adapters para un array de archivos.
+- **La página no cambió.** El store se lee desde el hook del módulo, así que `FilesPage` sigue
+  recibiendo `{ data, loading, error, reload }` y decidiendo qué rama renderiza.
+
+Si mañana el store creciera a varias features, esta estructura ya escala; y si nunca crece, tampoco
+molesta.
 
 ## Descartados a propósito — no los reintroduzcas
 
@@ -88,7 +113,7 @@ Si creés que alguno hace falta, justificá con un problema **real y presente**,
 
 | Descartado | Por qué |
 |---|---|
-| Redux / Zustand / Context global | Hay una pantalla y un hook. Redux es punto opcional del challenge; se evalúa cuando exista estado compartido de verdad. |
+| Zustand / Context global como store | El estado global ya vive en Redux Toolkit, que es el que nombra el enunciado. Dos mecanismos de estado global es uno de más. |
 | React Query / SWR | El hook son 30 líneas. Una librería de caché para una request es desproporcionado. |
 | TypeScript | Prohibido por el enunciado. Los tipos se documentan con JSDoc. |
 | Componentes de clase | Requisito explícito: programación funcional y hooks. |

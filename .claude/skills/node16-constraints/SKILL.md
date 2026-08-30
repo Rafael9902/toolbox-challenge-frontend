@@ -29,8 +29,37 @@ campo `engines`.
 | `@commitlint/cli` | **17.x** | **18.x exige Node 18+** |
 | `react` / `react-dom` | 18.x | |
 | `react-bootstrap` | 2.x | requiere `bootstrap` 5 |
+| `@reduxjs/toolkit` | 2.x | ninguna: **la última major sí corre en Node 16** (ver abajo) |
+| `react-redux` | 9.x | ninguna: pide React 18+, que ya usamos |
 
 `vite` y `vitest` **no se usan acá**: el enunciado nombra Webpack en los requisitos técnicos.
+
+### Un paquete sin `engines` no está aprobado: está sin declarar
+
+`npm view <paquete>@<major> engines.node` es el primer filtro, no el único. Cuando **no imprime nada**,
+como pasa con todo el árbol de Redux, el paquete no declaró requisito y hay que verificarlo a mano:
+
+```bash
+npm view @reduxjs/toolkit@2 engines.node   # sin salida -> no declara
+npm view @reduxjs/toolkit@2 exports.\".\"    # a dónde resuelve cada condición
+```
+
+Lo que se revisó antes de fijar `@reduxjs/toolkit@2` + `react-redux@9` + `redux@5` en Node 16:
+
+1. **`npm install` sin `EBADENGINE`** para los paquetes nuevos ni sus transitivas.
+2. **`require()` real en Node 16**, creando un store y despachando una acción.
+3. **El mapa de `exports`.** Es lo que rompe en Jest: `jest-environment-jsdom` resuelve con la
+   condición `browser`, y si esa rama apunta sólo a ESM, Jest falla con *"Cannot use import statement
+   outside a module"*. Acá no pasa: en RTK la condición `browser` tiene un `default` que va al CJS
+   (`dist/cjs/index.js`) y `react-redux` ni siquiera declara `browser`. Por eso **no hace falta**
+   `customExportConditions` en `jest.config.js`.
+4. **`npm test` y `npm run build` en `v16.20.2`.**
+
+Si alguna de las cuatro fallara, el plan B era bajar a `@reduxjs/toolkit@1` + `react-redux@8` +
+`redux@4`, que son las últimas majors previas al salto de empaquetado. No hizo falta.
+
+`node-releases@2.0.54` sí avisa `EBADENGINE` (pide Node 18+), pero **ya venía en el lockfile**: es una
+transitiva de `browserslist` que sólo aporta datos al build de Babel, y CI en Node 16 pasa con ella.
 
 ## Dependencias transitivas: `overrides`
 
