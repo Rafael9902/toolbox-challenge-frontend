@@ -27,7 +27,10 @@ Acá **sí se pueden mockear módulos**: Babel transpila a CommonJS, así que `j
 | componentes sueltos | `render()` con props fijas |
 | pantalla completa | `test/integration/`, con `global.fetch` mockeado |
 
-**Cero red real en toda la suite**, en cualquier nivel.
+**Cero red real en toda la suite**, en cualquier nivel, y está **forzado**: `test/setup.js` instala en
+cada test un `fetch` que tira y registra el intento, así que olvidarse de mockear falla el test con
+`The test reached the network instead of a double: <URL>` en vez de heredar el doble del test anterior.
+Un test que necesita una respuesta instala la suya encima; no hay que desactivar nada.
 
 ## Consultá por rol, no por implementación
 
@@ -66,6 +69,8 @@ esperar el resultado, o falta cancelar el efecto.
 
 ## Setup
 
-`test/setup.js` carga `@testing-library/jest-dom` (matchers como `toBeInTheDocument`).
+`test/setup.js` carga `@testing-library/jest-dom` (matchers como `toBeInTheDocument`) e instala el
+guard de red de `test/networkGuard.js`.
 `test/styleMock.js` reemplaza los imports de CSS, que Jest no necesita interpretar.
-`clearMocks: true` en el config limpia los mocks entre tests; no hace falta hacerlo a mano.
+`clearMocks: true` en el config limpia las **llamadas** de los mocks entre tests —no sus
+implementaciones—, por eso el guard reinstala un `fetch` nuevo en cada uno.
