@@ -13,10 +13,25 @@ const renderApp = () =>
     </Provider>
   )
 
-/** Builds a fetch double, so the test never touches the network. */
+/** Names the listing endpoint answers, so the filter has something to offer. */
+const LISTING = { files: ['test1.csv', 'test3.csv', 'test2.csv', 'test9.csv'] }
+
+/**
+ * Builds a fetch double, so the test never touches the network.
+ *
+ * The filter asks for `/files/list` besides the data, so the double answers
+ * that path on its own: a test states what the data endpoint returns and does
+ * not have to mind the listing.
+ */
 const mockFetch = (impl) => {
-  global.fetch = jest.fn(impl)
+  global.fetch = jest.fn((url, options) =>
+    url.includes('/files/list')
+      ? Promise.resolve({ ok: true, status: 200, json: async () => LISTING })
+      : impl(url, options))
 }
+
+/** The calls the double received for the data endpoint, listing aside. */
+const dataCalls = () => global.fetch.mock.calls.filter(([url]) => url.includes('/files/data'))
 
 const respondWith = (body, { ok = true, status = 200 } = {}) =>
   () => Promise.resolve({ ok, status, json: async () => body })
@@ -64,8 +79,8 @@ describe('App', () => {
     renderApp()
 
     await screen.findByRole('table')
-    expect(global.fetch).toHaveBeenCalledTimes(1)
-    expect(global.fetch.mock.calls[0][0]).toBe('http://localhost:3000/files/data')
+    expect(dataCalls()).toHaveLength(1)
+    expect(dataCalls()[0][0]).toBe('http://localhost:3000/files/data')
   })
 
   it('shows a loading indicator while the API is being reached', () => {
@@ -107,9 +122,10 @@ describe('App', () => {
 
     renderApp()
 
-    await screen.findByRole('table')
-    expect(screen.queryByText('test1.csv')).not.toBeInTheDocument()
-    expect(screen.queryByText('test2.csv')).not.toBeInTheDocument()
+    // Scoped to the table: the names also appear as options of the filter.
+    const table = await screen.findByRole('table')
+    expect(within(table).queryByText('test1.csv')).not.toBeInTheDocument()
+    expect(within(table).queryByText('test2.csv')).not.toBeInTheDocument()
   })
 
   it('shows an actionable error when the API is unreachable', async () => {
@@ -131,16 +147,16 @@ describe('App', () => {
   })
 
   it('retries the request when the user presses retry', async () => {
-    global.fetch = jest
-      .fn()
-      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
-      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => FILES })
+    let attempt = 0
+    mockFetch(() => (attempt++ === 0
+      ? Promise.reject(new TypeError('Failed to fetch'))
+      : Promise.resolve({ ok: true, status: 200, json: async () => FILES })))
 
     renderApp()
     await userEvent.click(await screen.findByRole('button', { name: /retry/i }))
 
     expect(await screen.findByRole('table')).toBeInTheDocument()
-    await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(dataCalls()).toHaveLength(2))
   })
 
   it('shows the empty state when the API answers with no files', async () => {
@@ -164,10 +180,10 @@ describe('App', () => {
 
   it('shows the loading indicator again while the retry is in flight', async () => {
     let respond
-    global.fetch = jest
-      .fn()
-      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
-      .mockImplementationOnce(() => new Promise((resolve) => { respond = resolve }))
+    let attempt = 0
+    mockFetch(() => (attempt++ === 0
+      ? Promise.reject(new TypeError('Failed to fetch'))
+      : new Promise((resolve) => { respond = resolve })))
 
     renderApp()
     await userEvent.click(await screen.findByRole('button', { name: /retry/i }))
@@ -200,4 +216,68 @@ describe('App', () => {
     const alert = await screen.findByRole('alert')
     expect(alert).not.toHaveTextContent('ECONNREFUSED')
   })
+
+  describe('filtering by file name', () => {
+    it('offers the names the listing endpoint answers', async () => {
+      mockFetch(respondWith(FILES))
+
+      renderApp()
+
+      const filter = await screen.findByRole('combobox', { name: /filter by file name/i })
+      expect(within(filter).getByRole('option', { name: 'All files' })).toBeInTheDocument()
+      LISTING.files.forEach((name) => {
+        expect(within(filter).getByRole('option', { name })).toBeInTheDocument()
+      })
+    })
+
+    it('asks the API for that file only, narrowing server side', async () => {
+      const ONLY_TEST3 = [FILES[1]]
+      mockFetch((url) =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => (url.includes('fileName=') ? ONLY_TEST3 : FILES)
+        }))
+
+      renderApp()
+      await screen.findByRole('table')
+      await userEvent.selectOptions(
+        screen.getByRole('combobox', { name: /filter by file name/i }),
+        'test3.csv'
+      )
+
+      await waitFor(() =>
+        expect(dataCalls().map(([url]) => url)).toContain(
+          'http://localhost:3000/files/data?fileName=test3.csv'))
+      const table = await screen.findByRole('table')
+      expect(within(table).getAllByRole('row')).toHaveLength(3) // header + 2 lines
+    })
+
+    it('goes back to every file when the filter is cleared', async () => {
+      mockFetch(respondWith(FILES))
+
+      renderApp()
+      await screen.findByRole('table')
+      const filter = screen.getByRole('combobox', { name: /filter by file name/i })
+      await userEvent.selectOptions(filter, 'test3.csv')
+      await userEvent.selectOptions(filter, '')
+
+      await waitFor(() =>
+        expect(dataCalls().at(-1)[0]).toBe('http://localhost:3000/files/data'))
+    })
+
+    it('keeps working with the filter disabled when the listing fails', async () => {
+      global.fetch = jest.fn((url) =>
+        url.includes('/files/list')
+          ? Promise.reject(new TypeError('Failed to fetch'))
+          : Promise.resolve({ ok: true, status: 200, json: async () => FILES }))
+
+      renderApp()
+
+      expect(await screen.findByRole('table')).toBeInTheDocument()
+      expect(screen.getByRole('combobox', { name: /filter by file name/i })).toBeDisabled()
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    })
+  })
+
 })
