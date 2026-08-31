@@ -3,68 +3,108 @@
 Cliente en React del API del challenge: consume `GET /files/data`, aplana la respuesta y la muestra
 en una tabla.
 
-> **Estado:** el alcance obligatorio del challenge está completo (`FRONTEND - TASK-001` a `TASK-006`).
-> De los opcionales están los **tests con Jest** y la **gestión de estado con Redux**; el detalle está
-> en [Puntos opcionales](#puntos-opcionales).
-
-**Índice:** [Requisitos](#requisitos) · [Levantar la app completa](#levantar-la-app-completa) ·
-[Qué se ve en pantalla](#qué-se-ve-en-pantalla) · [Decisiones de diseño](#decisiones-de-diseño) ·
-[Puntos opcionales](#puntos-opcionales) · [Arquitectura](#arquitectura) ·
-[Estado global con Redux](#estado-global-con-redux) · [Configuración](#configuración) ·
-[Tests](#tests) · [CI y git hooks](#ci-y-git-hooks)
+> **Estado:** alcance obligatorio y opcional completos (`FRONTEND - TASK-001` a `TASK-010`).
 
 ---
 
-## Requisitos
+## Cómo ejecutarlo
 
-| Ítem | Valor |
-|---|---|
-| Runtime | **NodeJS 16** (probado en `v16.20.2`, npm `8.19.4`) |
-| Dependencias globales | ninguna — todo sale de `package.json` |
-| Variables de entorno | ninguna, ni obligatoria ni opcional |
-| Puerto del dev server | **8080** |
-| Backend | tiene que estar corriendo en `http://localhost:3000` |
+La app **necesita el API corriendo** en `http://localhost:3000`. Está en el repo
+[`toolbox-challenge-backend`](https://github.com/Rafael9902/toolbox-challenge-backend).
 
-El repo incluye `.nvmrc`:
+### Con Docker — la forma recomendada
+
+No hace falta instalar NodeJS. Cada repo trae su propio `docker-compose.yml`, así que van en dos
+terminales:
 
 ```bash
-nvm use     # lee .nvmrc -> 16
-node -v     # debe imprimir v16.20.2
-```
-
-A diferencia del backend, **NodeJS 16 sí tiene build nativa para Apple Silicon**: acá no hace falta
-Rosetta.
-
-## Levantar la app completa
-
-La app no sirve datos por sí sola: necesita el API del repo `toolbox-challenge-backend`. Los dos
-proyectos corren en **versiones distintas de NodeJS**, así que van en **dos terminales separadas**.
-
-### Terminal 1 — el API, en NodeJS 14
-
-```bash
+# terminal 1 — el API
 cd toolbox-challenge-backend
-nvm use          # -> 14
-npm install
-npm start        # queda escuchando en http://localhost:3000
+docker compose up --build          # http://localhost:3000
+
+# terminal 2 — esta app
+cd toolbox-challenge-frontend
+docker compose up --build          # http://localhost:8080
 ```
 
-> **En Apple Silicon**, NodeJS 14 no tiene build arm64: hay que abrir primero un shell x86_64 con
-> `arch -x86_64 zsh` y recién ahí correr `nvm use`. El README del backend lo explica en detalle.
-> Este repo no lo necesita.
-
-### Terminal 2 — el frontend, en NodeJS 16
+O sin Compose:
 
 ```bash
-cd toolbox-challenge-frontend
+docker build -t toolbox-web .
+docker run --rm -p 8080:80 toolbox-web
+```
+
+### Sin Docker
+
+Requiere **NodeJS 16** (probado en `v16.20.2`). El repo trae `.nvmrc`:
+
+```bash
 nvm use          # -> 16
 npm install
-npm start        # abre http://localhost:8080
+npm start        # http://localhost:8080
 ```
 
-Abrí **http://localhost:8080** y vas a ver la tabla.
+A diferencia del backend, NodeJS 16 tiene build nativa para Apple Silicon: acá no hace falta Rosetta.
 
-### Comandos
+| | |
+|---|---|
+| Puerto de la app | **8080** |
+| Puerto del API | **3000** (tiene que estar levantado) |
+| Variables de entorno | ninguna |
+
+## Qué vas a ver
+
+Abrí **http://localhost:8080**. Una barra roja arriba, un selector para filtrar por archivo, y la
+tabla:
+
+```
+┌───────────────────────────────────────────────────────────────────────────────┐
+│                                                                               │  <- barra
+├───────────────────────────────────────────────────────────────────────────────┤
+│  Filter by file name:  [ All files          ▾ ]                               │
+├───────────┬──────────────┬───────────┬────────────────────────────────────────┤
+│ File Name │ Text         │ Number    │ Hex                                    │
+├───────────┼──────────────┼───────────┼────────────────────────────────────────┤
+│ test2.csv │ YcCXKLtFlxm  │ 89632563  │ 17cd994543cc9428c90dbf011c269ea3       │
+│ test3.csv │ g            │ 101382507 │ 65badd1f29e6235199261cd3026a97f5       │
+│ …         │ …            │ …         │ …                                      │
+└───────────┴──────────────┴───────────┴────────────────────────────────────────┘
+```
+
+La tabla es **plana**: el nombre del archivo se repite en cada una de sus líneas. El selector filtra
+del lado del servidor — elegir un archivo hace que el API descargue sólo ese.
+
+### Van a faltar archivos, y está bien
+
+El API externo del challenge sirve datos **sucios a propósito**, así que la mayoría de las líneas se
+descartan antes de llegar acá. En una corrida típica llegan **7 archivos y 4 vienen sin ninguna línea
+válida**, así que la tabla muestra unas 15 filas de sólo tres archivos.
+
+**Que se vean pocas filas no es una falla de la app**: es el descarte de líneas corruptas funcionando.
+El desglose por motivo está en el README del backend.
+
+### Los otros tres estados
+
+| Estado | Cuándo | Qué se ve |
+|---|---|---|
+| Cargando | mientras la petición está en vuelo | spinner |
+| Error | el API no responde o devuelve un status de falla | alerta roja con mensaje y botón **Retry** |
+| Vacío | la respuesta llegó pero no hay ninguna línea válida | aviso de que no hay datos |
+
+**Sólo uno de los cuatro estados se muestra a la vez**, incluso cuando hay datos viejos y una petición
+nueva en vuelo. Si al abrir ves el estado de error, lo más probable es que **el backend no esté
+levantado**.
+
+## Enlaces
+
+| | |
+|---|---|
+| Board de Trello | https://trello.com/b/ZN8vBfxd |
+| Repo del API | https://github.com/Rafael9902/toolbox-challenge-backend |
+| Documentación del API | https://documenter.getpostman.com/view/27146414/2sBYAuSrSX |
+| Historias de usuario | [`docs/user-stories.md`](docs/user-stories.md) |
+
+## Comandos
 
 ```bash
 npm start                # dev server con hot reload en :8080
@@ -74,164 +114,7 @@ npm run test:unit        # sólo los tests unitarios
 npm run test:integration # sólo los tests de integración
 ```
 
-## Qué se ve en pantalla
-
-Una barra superior con el título y, debajo, la tabla con una fila por línea válida:
-
-```
-┌───────────────────────────────────────────────────────────────────────────────┐
-│  React Test App                                                               │
-├───────────┬──────────────┬───────────┬────────────────────────────────────────┤
-│ File Name │ Text         │ Number    │ Hex                                    │
-├───────────┼──────────────┼───────────┼────────────────────────────────────────┤
-│ test2.csv │ YcCXKLtFlxm  │ 89632563  │ 17cd994543cc9428c90dbf011c269ea3       │
-│ test3.csv │ g            │ 101382507 │ 65badd1f29e6235199261cd3026a97f5       │
-│ test3.csv │ mwmBQxoeKkx… │ 57685292  │ cb6dfa6422d170d2ae99aaf3f99665e4       │
-│ …         │ …            │ …         │ …                                      │
-└───────────┴──────────────┴───────────┴────────────────────────────────────────┘
-```
-
-La tabla es **plana**: el nombre del archivo se repite en cada una de sus líneas.
-
-### Van a faltar archivos, y está bien
-
-El API externo del challenge sirve datos **sucios a propósito**, así que la mayoría de las líneas se
-descartan antes de llegar acá. En la corrida del 2026-08-30 el API devolvió **7 archivos**, de los
-cuales **4 llegaron sin ninguna línea válida** y sólo tres aportaron filas:
-
-| Archivo | Filas en la tabla |
-|---|---|
-| `test2.csv` | 1 |
-| `test3.csv` | 3 |
-| `test9.csv` | 11 |
-| `test1.csv`, `test6.csv`, `test15.csv`, `test18.csv` | 0 |
-
-**Que la tabla muestre pocas filas no es una falla de la app**: es el descarte de líneas corruptas
-funcionando. El desglose por motivo está en el README del backend. Los archivos sin líneas válidas
-simplemente no aportan filas; si **ninguno** aporta, la pantalla muestra el estado vacío en lugar de
-una tabla con encabezados y nada debajo.
-
-### Los otros tres estados
-
-| Estado | Cuándo | Qué se ve |
-|---|---|---|
-| Cargando | mientras la petición está en vuelo | spinner de React Bootstrap |
-| Error | el API no responde o devuelve un status de falla | alerta roja con mensaje claro y botón **Retry** |
-| Vacío | la respuesta llegó pero no hay ninguna línea válida | aviso de que no hay datos |
-
-**Sólo uno de los cuatro estados se muestra a la vez**, incluso cuando el store tiene datos viejos y una
-petición nueva en vuelo. Es una invariante con tests propios; ver [Tests](#tests).
-
-Si al abrir la app ves el estado de error, lo más probable es que **el backend no esté levantado**.
-
-## Decisiones de diseño
-
-### Herramientas
-
-- **Webpack, no Vite.** El enunciado nombra Webpack en los requisitos técnicos del frontend. Vite sería
-  mejor experiencia de desarrollo, pero acá manda la consigna.
-- **Babel está permitido en el frontend.** El enunciado lo prohíbe explícitamente para el API, no para
-  el cliente, y hace falta para JSX. Lo que sigue prohibido —y no se usa— es TypeScript.
-- **Sin `"type": "module"`.** El código de `src/` es ESM y lo transpila Babel, mientras `webpack.config.js`,
-  `babel.config.js`, `jest.config.js` y `commitlint.config.js` quedan en CommonJS. Declararlo rompería
-  los cuatro configs de una.
-- **Jest, no Vitest.** El punto opcional del enunciado nombra Jest.
-- **CSS extraído en producción** con `mini-css-extract-plugin`. Sin él, los 227 KB de Bootstrap viajan
-  dentro del bundle de JS y no se pueden cachear aparte. Con él, el build emite `main.[hash].js` (204 KB)
-  y `main.[hash].css` (227 KB) por separado. En desarrollo el CSS sigue inline, para que funcione el HMR.
-
-### Aplicación
-
-- **Cross-origin resuelto con CORS en el backend**, no con el proxy del Dev Server. El API responde
-  `Access-Control-Allow-Origin: *`, así que la app apunta a la URL absoluta. La alternativa —`devServer.proxy`
-  y una baseUrl relativa— sólo funciona mientras el dev server esté en el medio, y deja de servir en
-  cuanto el bundle se sirve como estático.
-- **Con Redux, y sin router.** Redux está porque **es un punto opcional explícito del enunciado**, no
-  porque una pantalla y un hook lo pidieran; la sección [Estado global con Redux](#estado-global-con-redux)
-  cuenta cómo se implementó sin que se vuelva ceremonia. Un router, en cambio, no tendría ninguna ruta
-  que resolver: `pages/` distingue la vista *conectada* de los componentes presentacionales, no implica
-  routing.
-- **El aplanado vive en una función pura**, `toFileRows.js`, fuera del componente. Recibe
-  `[{ file, lines }]` y devuelve filas planas, así se testea sin renderizar nada y la tabla sólo se
-  ocupa de mostrar.
-- **La `key` de cada fila es `file|number|hex`**, derivada de los datos y nunca del índice del array:
-  con el índice, React reusa el nodo equivocado si la lista se filtra o se reordena.
-- **Cada petición se cancela al desmontar** con `AbortController`, y el `AbortError` se ignora en vez de
-  mostrarse: es el cleanup del propio efecto, no una falla que le importe al usuario.
-- **Los mensajes técnicos no llegan a la UI.** `shared/http/httpClient.js` traduce las fallas de
-  transporte a un `ApiError` con texto apto para mostrar; un `ECONNREFUSED` se ve como
-  "The API is unreachable. Is it running?".
-
-### Versiones fijadas por NodeJS 16
-
-`webpack-dev-server@4`, `husky@8` y `@commitlint/cli@17`: las majors siguientes exigen Node 18+. Además
-hay un `overrides` para `@testing-library/dom`, que npm resolvía a una 10.x incompatible aunque React
-Testing Library 14 declara `^9.0.0`. El detalle está en `.claude/skills/node16-constraints/`.
-
-El árbol de Redux —`@reduxjs/toolkit@2`, `react-redux@9`, `redux@5`— **no** hubo que caparlo: ninguno
-declara `engines`, así que se verificó a mano (instalación sin `EBADENGINE`, `require()` en Node 16,
-mapa de `exports` para que Jest resuelva el CJS, y `npm test` + `npm run build` en `v16.20.2`). El
-procedimiento completo está en esa misma skill.
-
-## Puntos opcionales
-
-| Punto opcional | Estado | Tarjeta |
-|---|---|---|
-| Tests con Jest | **implementado** | `TASK-009` |
-| Redux | **implementado** | `TASK-008` |
-| Filtro por `fileName` | **implementado** | `TASK-007` |
-| Docker | **implementado** | `TASK-010` |
-
-Los tests están desde el primer commit, no como un agregado al final: cada TASK entró con los suyos.
-`TASK-009` fue una **auditoría** de esa suite contra los escenarios que exige el enunciado, no una
-tanda de tests nueva; lo que agregó está en [Tests](#tests).
-
-Redux entró como **refactor interno**: el comportamiento en pantalla es idéntico al del alcance
-obligatorio, y así es como se validó. El cómo está en [Estado global con Redux](#estado-global-con-redux).
-
-**El filtro es del lado del servidor.** Elegir un archivo dispara
-`GET /files/data?fileName=<archivo>`, así el backend descarga sólo ese archivo en vez de los nueve.
-Acotar el array en memoria habría dado el mismo resultado en pantalla desperdiciando ocho descargas.
-
-Si `GET /files/list` falla, el selector queda deshabilitado y la pantalla sigue mostrando todos los
-datos: la lista es un accesorio y no puede tumbar la vista principal.
-
-## Docker
-
-La app se puede levantar sin instalar NodeJS:
-
-```bash
-docker build -t toolbox-web .
-docker run --rm -p 8080:80 toolbox-web
-```
-
-El `Dockerfile` es **multi-stage**: NodeJS 16 sólo construye el bundle y no viaja en la imagen final,
-que es un `nginx:alpine` sirviendo estáticos. Son **95 MB** contra los 200 MB que ocuparía llevar
-NodeJS al runtime.
-
-`nginx.conf` hace dos cosas: `try_files` para que cualquier ruta caiga en `index.html` —lo mismo que
-`historyApiFallback` en el dev server— y cache de un año para los assets hasheados, que nunca cambian
-bajo el mismo nombre, sin cachear `index.html`.
-
-O con Compose:
-
-```bash
-docker compose up --build      # app en http://localhost:8080
-```
-
-### Las dos apps juntas
-
-**Cada repo tiene su propio `docker-compose.yml` con un solo servicio**, así que ninguno depende de
-dónde esté clonado el otro. Para levantar todo, un `docker compose up` en cada uno, en dos terminales:
-
-```bash
-cd toolbox-challenge-backend  && docker compose up --build   # API en :3000
-cd toolbox-challenge-frontend && docker compose up --build   # app en :8080
-```
-
-**El bundle es estático y su JavaScript corre en el navegador, no en el contenedor.** Por eso alcanza
-el API en `localhost:3000` de tu máquina: nada de acá necesita saber dónde está el contenedor del API,
-sólo que esté publicado en ese puerto. Es lo que permite que los dos composes sean independientes.
+---
 
 ## Arquitectura
 
@@ -409,6 +292,115 @@ desde adentro de la suite sólo probaría que la suite se prueba a sí misma.
 
 Types válidos: `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `revert`, `style`,
 `test`. Para saltearlos en una emergencia: `git commit --no-verify`.
+
+## Puntos opcionales
+
+| Punto opcional | Estado | Tarjeta |
+|---|---|---|
+| Tests con Jest | **implementado** | `TASK-009` |
+| Redux | **implementado** | `TASK-008` |
+| Filtro por `fileName` | **implementado** | `TASK-007` |
+| Docker | **implementado** | `TASK-010` |
+
+Los tests están desde el primer commit, no como un agregado al final: cada TASK entró con los suyos.
+`TASK-009` fue una **auditoría** de esa suite contra los escenarios que exige el enunciado, no una
+tanda de tests nueva; lo que agregó está en [Tests](#tests).
+
+Redux entró como **refactor interno**: el comportamiento en pantalla es idéntico al del alcance
+obligatorio, y así es como se validó. El cómo está en [Estado global con Redux](#estado-global-con-redux).
+
+**El filtro es del lado del servidor.** Elegir un archivo dispara
+`GET /files/data?fileName=<archivo>`, así el backend descarga sólo ese archivo en vez de los nueve.
+Acotar el array en memoria habría dado el mismo resultado en pantalla desperdiciando ocho descargas.
+
+Si `GET /files/list` falla, el selector queda deshabilitado y la pantalla sigue mostrando todos los
+datos: la lista es un accesorio y no puede tumbar la vista principal.
+
+## Docker: cómo están hechas las imágenes
+
+La app se puede levantar sin instalar NodeJS:
+
+```bash
+docker build -t toolbox-web .
+docker run --rm -p 8080:80 toolbox-web
+```
+
+El `Dockerfile` es **multi-stage**: NodeJS 16 sólo construye el bundle y no viaja en la imagen final,
+que es un `nginx:alpine` sirviendo estáticos. Son **95 MB** contra los 200 MB que ocuparía llevar
+NodeJS al runtime.
+
+`nginx.conf` hace dos cosas: `try_files` para que cualquier ruta caiga en `index.html` —lo mismo que
+`historyApiFallback` en el dev server— y cache de un año para los assets hasheados, que nunca cambian
+bajo el mismo nombre, sin cachear `index.html`.
+
+O con Compose:
+
+```bash
+docker compose up --build      # app en http://localhost:8080
+```
+
+### Las dos apps juntas
+
+**Cada repo tiene su propio `docker-compose.yml` con un solo servicio**, así que ninguno depende de
+dónde esté clonado el otro. Para levantar todo, un `docker compose up` en cada uno, en dos terminales:
+
+```bash
+cd toolbox-challenge-backend  && docker compose up --build   # API en :3000
+cd toolbox-challenge-frontend && docker compose up --build   # app en :8080
+```
+
+**El bundle es estático y su JavaScript corre en el navegador, no en el contenedor.** Por eso alcanza
+el API en `localhost:3000` de tu máquina: nada de acá necesita saber dónde está el contenedor del API,
+sólo que esté publicado en ese puerto. Es lo que permite que los dos composes sean independientes.
+
+## Decisiones de diseño
+
+### Herramientas
+
+- **Webpack, no Vite.** El enunciado nombra Webpack en los requisitos técnicos del frontend. Vite sería
+  mejor experiencia de desarrollo, pero acá manda la consigna.
+- **Babel está permitido en el frontend.** El enunciado lo prohíbe explícitamente para el API, no para
+  el cliente, y hace falta para JSX. Lo que sigue prohibido —y no se usa— es TypeScript.
+- **Sin `"type": "module"`.** El código de `src/` es ESM y lo transpila Babel, mientras `webpack.config.js`,
+  `babel.config.js`, `jest.config.js` y `commitlint.config.js` quedan en CommonJS. Declararlo rompería
+  los cuatro configs de una.
+- **Jest, no Vitest.** El punto opcional del enunciado nombra Jest.
+- **CSS extraído en producción** con `mini-css-extract-plugin`. Sin él, los 227 KB de Bootstrap viajan
+  dentro del bundle de JS y no se pueden cachear aparte. Con él, el build emite `main.[hash].js` (204 KB)
+  y `main.[hash].css` (227 KB) por separado. En desarrollo el CSS sigue inline, para que funcione el HMR.
+
+### Aplicación
+
+- **Cross-origin resuelto con CORS en el backend**, no con el proxy del Dev Server. El API responde
+  `Access-Control-Allow-Origin: *`, así que la app apunta a la URL absoluta. La alternativa —`devServer.proxy`
+  y una baseUrl relativa— sólo funciona mientras el dev server esté en el medio, y deja de servir en
+  cuanto el bundle se sirve como estático.
+- **Con Redux, y sin router.** Redux está porque **es un punto opcional explícito del enunciado**, no
+  porque una pantalla y un hook lo pidieran; la sección [Estado global con Redux](#estado-global-con-redux)
+  cuenta cómo se implementó sin que se vuelva ceremonia. Un router, en cambio, no tendría ninguna ruta
+  que resolver: `pages/` distingue la vista *conectada* de los componentes presentacionales, no implica
+  routing.
+- **El aplanado vive en una función pura**, `toFileRows.js`, fuera del componente. Recibe
+  `[{ file, lines }]` y devuelve filas planas, así se testea sin renderizar nada y la tabla sólo se
+  ocupa de mostrar.
+- **La `key` de cada fila es `file|number|hex`**, derivada de los datos y nunca del índice del array:
+  con el índice, React reusa el nodo equivocado si la lista se filtra o se reordena.
+- **Cada petición se cancela al desmontar** con `AbortController`, y el `AbortError` se ignora en vez de
+  mostrarse: es el cleanup del propio efecto, no una falla que le importe al usuario.
+- **Los mensajes técnicos no llegan a la UI.** `shared/http/httpClient.js` traduce las fallas de
+  transporte a un `ApiError` con texto apto para mostrar; un `ECONNREFUSED` se ve como
+  "The API is unreachable. Is it running?".
+
+### Versiones fijadas por NodeJS 16
+
+`webpack-dev-server@4`, `husky@8` y `@commitlint/cli@17`: las majors siguientes exigen Node 18+. Además
+hay un `overrides` para `@testing-library/dom`, que npm resolvía a una 10.x incompatible aunque React
+Testing Library 14 declara `^9.0.0`. El detalle está en `.claude/skills/node16-constraints/`.
+
+El árbol de Redux —`@reduxjs/toolkit@2`, `react-redux@9`, `redux@5`— **no** hubo que caparlo: ninguno
+declara `engines`, así que se verificó a mano (instalación sin `EBADENGINE`, `require()` en Node 16,
+mapa de `exports` para que Jest resuelva el CJS, y `npm test` + `npm run build` en `v16.20.2`). El
+procedimiento completo está en esa misma skill.
 
 ## Skills de Claude Code
 
