@@ -15,11 +15,20 @@ const filesUnder = (dir) =>
   })
 
 describe('Layout', () => {
-  it('shows the application title in the top bar', () => {
-    render(<Layout>content</Layout>)
+  it('puts a bar on top, with no text of its own', () => {
+    const { container } = render(<Layout>content</Layout>)
 
-    expect(screen.getByRole('heading', { name: 'React Test App' })).toBeInTheDocument()
-    expect(screen.getByRole('navigation')).toHaveClass('navbar')
+    const bar = container.querySelector('nav')
+    expect(bar).toBeInTheDocument()
+    expect(bar).toHaveClass('bg-danger')
+    expect(bar).toHaveTextContent('')
+  })
+
+  it('hides the bar from assistive technology, since it carries no content', () => {
+    const { container } = render(<Layout>content</Layout>)
+
+    expect(container.querySelector('nav')).toHaveAttribute('aria-hidden', 'true')
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument()
   })
 
   it('renders the children inside a centered container', () => {

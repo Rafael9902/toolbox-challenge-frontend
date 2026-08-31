@@ -62,7 +62,8 @@ describe('App', () => {
 
     renderApp()
 
-    expect(screen.getByText('React Test App')).toBeInTheDocument()
+    expect(document.querySelector('nav')).toBeInTheDocument()
+    expect(screen.getByRole('main')).toBeInTheDocument()
   })
 
   it('mounts the features inside the centered content area', async () => {
