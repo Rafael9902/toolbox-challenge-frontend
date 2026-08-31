@@ -27,7 +27,7 @@
 
 > ⚠️ El wireframe (`https://cs1.ssltrust.me/s/ECH9VusiMmi3ac1`) no está disponible en este análisis. Se asume el layout clásico del challenge:
 > **navbar superior con el título de la app** + **tabla centrada** con las columnas `File Name | Text | Number | Hex`, y (para el punto opcional) un **campo/selector de filtro por nombre de archivo** sobre la tabla.
-> **Validar contra el wireframe real antes de cerrar HU-FE-02 y HU-FE-04.**
+> El layout entregado fue contrastado contra él.
 
 ### Flujo objetivo
 

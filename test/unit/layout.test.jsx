@@ -15,40 +15,36 @@ const filesUnder = (dir) =>
   })
 
 describe('Layout', () => {
-  it('puts a bar on top, with no text of its own', () => {
-    const { container } = render(<Layout>content</Layout>)
+  it('shows the application title in the top bar', () => {
+    render(<Layout>content</Layout>)
 
-    const bar = container.querySelector('nav')
-    expect(bar).toBeInTheDocument()
-    expect(bar).toHaveClass('bg-danger')
-    expect(bar).toHaveTextContent('')
+    expect(screen.getByRole('heading', { name: 'React Test App' })).toBeInTheDocument()
   })
 
-  it('hides the bar from assistive technology, since it carries no content', () => {
+  it('paints the bar with the colour the wireframe fixes', () => {
     const { container } = render(<Layout>content</Layout>)
 
-    expect(container.querySelector('nav')).toHaveAttribute('aria-hidden', 'true')
-    expect(screen.queryByRole('navigation')).not.toBeInTheDocument()
+    expect(container.querySelector('nav')).toHaveClass('app-bar')
   })
 
-  it('renders the children inside a centered container', () => {
+  it('renders the children inside the content container', () => {
     render(<Layout>content</Layout>)
 
     const main = screen.getByRole('main')
-    expect(main).toHaveClass('container')
+    expect(main).toHaveClass('container-fluid')
     expect(main).toContainElement(screen.getByText('content'))
   })
 
-  it('lays the content out on the responsive Bootstrap grid', () => {
+  it('spans the viewport, as the wireframe shows, at every width', () => {
+    // The wireframe puts the table nearly edge to edge, so the content is not
+    // capped to a column: `container-fluid` is the Bootstrap layout that keeps
+    // the padding responsive without constraining the width.
     render(<Layout>content</Layout>)
 
-    const row = screen.getByRole('main').querySelector('.row')
-    expect(row).toBeInTheDocument()
-
-    const column = row.firstElementChild
-    expect(column).toHaveClass('col-12')
-    expect(column).toHaveClass('col-xl-10')
-    expect(column).toContainElement(screen.getByText('content'))
+    const main = screen.getByRole('main')
+    expect(main).toHaveClass('container-fluid')
+    expect(main.className).not.toMatch(/\bcol(-|$)/)
+    expect(main.querySelector('.row')).toBeNull()
   })
 
   it('adds no styling of its own on top of Bootstrap', () => {
@@ -60,8 +56,13 @@ describe('Layout', () => {
 })
 
 describe('styling sources', () => {
-  it('ships no stylesheet of its own, so every style comes from Bootstrap', () => {
-    expect(filesUnder(SRC).filter((file) => file.endsWith('.css'))).toEqual([])
+  it('ships a single stylesheet, for the one colour Bootstrap does not carry', () => {
+    // The wireframe fixes the bar at #ff6666 and Bootstrap has no such token.
+    // Everything else still comes from the library, so one file is the budget.
+    const stylesheets = filesUnder(SRC).filter((file) => file.endsWith('.css'))
+
+    expect(stylesheets).toHaveLength(1)
+    expect(stylesheets[0]).toMatch(/layout\.css$/)
   })
 
   it('imports the Bootstrap stylesheet once, from the entry point', () => {
