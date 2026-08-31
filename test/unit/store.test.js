@@ -23,11 +23,11 @@ describe('createAppStore', () => {
     store.dispatch(loadFiles.fulfilled([], 'request-1'))
 
     expect(other.getState().files).toEqual({
-        data: null,
-        loading: true,
-        error: null,
-        fileNames: [],
-        selectedFile: ''
-      })
+      data: null,
+      loading: true,
+      error: null,
+      fileNames: [],
+      selectedFile: ''
+    })
   })
 })

@@ -8,7 +8,7 @@ import { FilesTable } from '../../src/modules/files/components/FilesTable.jsx'
 
 describe('Loading', () => {
   it('exposes an accessible description of what is loading', () => {
-    render(<Loading label="Checking the API" />)
+    render(<Loading label='Checking the API' />)
 
     expect(screen.getByRole('status')).toHaveTextContent('Checking the API')
   })
@@ -22,26 +22,26 @@ describe('Loading', () => {
 
 describe('ErrorAlert', () => {
   it('shows the message', () => {
-    render(<ErrorAlert message="The API is unreachable." />)
+    render(<ErrorAlert message='The API is unreachable.' />)
 
     expect(screen.getByRole('alert')).toHaveTextContent('The API is unreachable.')
   })
 
   it('signals the failure with the danger variant', () => {
-    render(<ErrorAlert message="Boom" />)
+    render(<ErrorAlert message='Boom' />)
 
     expect(screen.getByRole('alert')).toHaveClass('alert-danger')
   })
 
   it('offers no retry button when there is nothing to retry', () => {
-    render(<ErrorAlert message="Boom" />)
+    render(<ErrorAlert message='Boom' />)
 
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 
   it('calls onRetry when the button is pressed', async () => {
     const onRetry = jest.fn()
-    render(<ErrorAlert message="Boom" onRetry={onRetry} />)
+    render(<ErrorAlert message='Boom' onRetry={onRetry} />)
 
     await userEvent.click(screen.getByRole('button', { name: /retry/i }))
 
@@ -51,7 +51,7 @@ describe('ErrorAlert', () => {
 
 describe('EmptyState', () => {
   it('shows the message it is handed', () => {
-    render(<EmptyState message="The API reported no status." />)
+    render(<EmptyState message='The API reported no status.' />)
 
     expect(screen.getByText('The API reported no status.')).toBeInTheDocument()
   })

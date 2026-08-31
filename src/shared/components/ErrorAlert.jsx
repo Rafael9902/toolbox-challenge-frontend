@@ -8,10 +8,10 @@ import Button from 'react-bootstrap/Button'
  * @returns {JSX.Element}
  */
 export const ErrorAlert = ({ message, onRetry }) => (
-  <Alert variant="danger" className="d-flex justify-content-between align-items-center">
+  <Alert variant='danger' className='d-flex justify-content-between align-items-center'>
     <span>{message}</span>
     {onRetry && (
-      <Button variant="outline-danger" size="sm" onClick={onRetry}>
+      <Button variant='outline-danger' size='sm' onClick={onRetry}>
         Retry
       </Button>
     )}
