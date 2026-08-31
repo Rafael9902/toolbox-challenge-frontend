@@ -23,7 +23,7 @@ const emptyMessage = (selectedFile) =>
  * @returns {JSX.Element}
  */
 const contentFor = ({ request: { data, loading, error, reload }, selectedFile }) => {
-  if (loading) return <Loading label="Loading the files" />
+  if (loading) return <Loading label='Loading the files' />
   if (error) return <ErrorAlert message={error} onRetry={reload} />
 
   const rows = toFileRows(data || [])

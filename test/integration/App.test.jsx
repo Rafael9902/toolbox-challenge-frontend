@@ -280,5 +280,4 @@ describe('App', () => {
       expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     })
   })
-
 })

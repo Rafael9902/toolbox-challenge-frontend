@@ -13,14 +13,14 @@ import './layout.css'
  */
 export const Layout = ({ children }) => (
   <>
-    <Navbar variant="dark" className="app-bar mb-4">
+    <Navbar variant='dark' className='app-bar mb-4'>
       <Container fluid>
-        <Navbar.Brand as="h1" className="h4 mb-0">
+        <Navbar.Brand as='h1' className='h4 mb-0'>
           React Test App
         </Navbar.Brand>
       </Container>
     </Navbar>
-    <Container fluid as="main" className="pb-4">
+    <Container fluid as='main' className='pb-4'>
       {children}
     </Container>
   </>

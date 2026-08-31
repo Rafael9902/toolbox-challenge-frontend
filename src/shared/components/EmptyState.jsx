@@ -9,7 +9,7 @@ import Alert from 'react-bootstrap/Alert'
  * @returns {JSX.Element}
  */
 export const EmptyState = ({ message = 'No data available.' }) => (
-  <Alert variant="secondary" className="text-center">
+  <Alert variant='secondary' className='text-center'>
     {message}
   </Alert>
 )

@@ -12,14 +12,14 @@ import Form from 'react-bootstrap/Form'
  * @returns {JSX.Element}
  */
 export const FileFilter = ({ fileNames, selectedFile, onSelect }) => (
-  <Form.Group className="mb-3" controlId="file-name-filter">
+  <Form.Group className='mb-3' controlId='file-name-filter'>
     <Form.Label>Filter by file name</Form.Label>
     <Form.Select
       value={selectedFile}
       disabled={fileNames.length === 0}
       onChange={(event) => onSelect(event.target.value)}
     >
-      <option value="">All files</option>
+      <option value=''>All files</option>
       {fileNames.map((fileName) => (
         <option key={fileName} value={fileName}>
           {fileName}

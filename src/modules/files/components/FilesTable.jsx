@@ -10,13 +10,13 @@ import Table from 'react-bootstrap/Table'
  */
 export const FilesTable = ({ rows }) => (
   <Table striped bordered hover responsive>
-    <caption className="visually-hidden">Lines parsed from every file</caption>
+    <caption className='visually-hidden'>Lines parsed from every file</caption>
     <thead>
       <tr>
-        <th scope="col">File Name</th>
-        <th scope="col">Text</th>
-        <th scope="col">Number</th>
-        <th scope="col">Hex</th>
+        <th scope='col'>File Name</th>
+        <th scope='col'>Text</th>
+        <th scope='col'>Number</th>
+        <th scope='col'>Hex</th>
       </tr>
     </thead>
     <tbody>
@@ -25,7 +25,7 @@ export const FilesTable = ({ rows }) => (
           <td>{file}</td>
           <td>{text}</td>
           <td>{number}</td>
-          <td className="text-break">{hex}</td>
+          <td className='text-break'>{hex}</td>
         </tr>
       ))}
     </tbody>

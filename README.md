@@ -320,6 +320,7 @@ En cada push a `main` y en cada pull request, GitHub Actions corre sobre **NodeJ
 | `integration tests on NodeJS 16` | `npm run test:integration` |
 | `npm test on NodeJS 16` | `env -i "PATH=$PATH" "HOME=$HOME" npm test` |
 | `Production build on NodeJS 16` | `npm run build` |
+| `npm run lint on NodeJS 16` | `npm run lint` |
 
 Cada uno reporta su propio check, y ninguno cancela al otro, para ver cuál falló sin abrir el log. El
 build va aparte porque **una suite verde no dice nada sobre si el bundle sigue compilando**.
@@ -346,6 +347,7 @@ Types válidos: `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor
 | Redux | **implementado** | `TASK-008` |
 | Filtro por `fileName` | **implementado** | `TASK-007` |
 | Docker | **implementado** | `TASK-010` |
+| StandardJS | **implementado** | — |
 
 Los tests están desde el primer commit, no como un agregado al final: cada TASK entró con los suyos.
 `TASK-009` fue una **auditoría** de esa suite contra los escenarios que exige el enunciado, no una
