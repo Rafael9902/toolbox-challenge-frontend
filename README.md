@@ -213,19 +213,25 @@ NodeJS al runtime.
 `historyApiFallback` en el dev server— y cache de un año para los assets hasheados, que nunca cambian
 bajo el mismo nombre, sin cachear `index.html`.
 
-### Las dos apps juntas
-
-El `docker-compose.yml` vive en el repo del **backend** y construye este desde el directorio hermano,
-así que los dos repos tienen que estar clonados uno al lado del otro:
+O con Compose:
 
 ```bash
-cd ../toolbox-challenge-backend
-docker compose up --build      # API en :3000, app en :8080
+docker compose up --build      # app en http://localhost:8080
+```
+
+### Las dos apps juntas
+
+**Cada repo tiene su propio `docker-compose.yml` con un solo servicio**, así que ninguno depende de
+dónde esté clonado el otro. Para levantar todo, un `docker compose up` en cada uno, en dos terminales:
+
+```bash
+cd toolbox-challenge-backend  && docker compose up --build   # API en :3000
+cd toolbox-challenge-frontend && docker compose up --build   # app en :8080
 ```
 
 **El bundle es estático y su JavaScript corre en el navegador, no en el contenedor.** Por eso alcanza
-el API en `localhost:3000` de tu máquina y no necesita resolverlo por el nombre del servicio de
-Compose: sólo hace falta que el API publique su puerto.
+el API en `localhost:3000` de tu máquina: nada de acá necesita saber dónde está el contenedor del API,
+sólo que esté publicado en ese puerto. Es lo que permite que los dos composes sean independientes.
 
 ## Arquitectura
 

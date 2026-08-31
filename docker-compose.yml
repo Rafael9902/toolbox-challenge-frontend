@@ -1,0 +1,17 @@
+# Runs the client on its own. The API has its own compose in its own
+# repository: neither depends on where the other is checked out.
+#
+#   docker compose up --build     ->  http://localhost:8080
+#
+# The bundle is static and its JavaScript runs in the browser, so it reaches the
+# API at localhost:3000 on the host machine. Nothing here has to know where the
+# API container is: it only has to be published on that port.
+
+services:
+  web:
+    build: .
+    image: toolbox-challenge-web
+    container_name: toolbox-web
+    ports:
+      - "8080:80"
+    restart: unless-stopped
