@@ -114,6 +114,68 @@ npm run test:integration # sólo los tests de integración
 
 ---
 
+## Cómo se gestionó el trabajo
+
+El challenge se planificó como un backlog de **historias de usuario**, no como una lista de tareas
+técnicas. Cada una nació de un requisito del enunciado y quedó escrita con el mismo formato:
+
+```
+Como <rol>
+Quiero <capacidad>
+Para <beneficio>
+
+Criterios de aceptación, en Gherkin:
+  Dado ... Cuando ... Entonces ...
+```
+
+Las 10 historias de este repo están en [`docs/user-stories.md`](docs/user-stories.md), cada una con sus
+criterios, notas técnicas, estimación en puntos y un chequeo **INVEST** explícito — independiente,
+negociable, valiosa, estimable, pequeña y testeable.
+
+**Los criterios de aceptación son el contrato.** Cuando el enunciado dejaba algo ambiguo, la decisión
+quedó documentada en la historia y en las [Decisiones de diseño](#decisiones-de-diseño) en vez de
+resolverse en silencio dentro del código. Un caso concreto: el wireframe original nunca se pudo
+consultar, así que la historia del layout dejó asentado el patrón asumido en vez de fingir que se
+había verificado.
+
+### El tablero
+
+**https://trello.com/b/ZN8vBfxd**
+
+Un flujo Scrum de cuatro listas, con una tarjeta por historia. El tablero es compartido con el
+[repo del API](https://github.com/Rafael9902/toolbox-challenge-backend), porque varias historias del
+frontend dependen de una del backend:
+
+```
+Backlog  →  In Progress  →  In Review  →  Done
+```
+
+Etiquetas por área y por obligatoriedad: `BACKEND`, `FRONTEND`, `GLOBAL` y `REQUIRED`. Una tarjeta sin
+`REQUIRED` es un punto opcional del enunciado.
+
+| Área | Obligatorias | Opcionales |
+|---|---|---|
+| Frontend | 6 | 4 |
+| Backend | 8 | 4 |
+| Global (entrega) | 1 | — |
+
+Las dependencias cruzadas están escritas en cada historia. La más marcada: el consumo de
+`GET /files/data` no podía empezar hasta que el API expusiera ese endpoint, y el filtro por nombre
+necesitaba además `GET /files/list` y el query param `?fileName=`.
+
+### Cómo avanza una tarjeta
+
+El estado del tablero está atado al repositorio, no se mueve a mano:
+
+| Movimiento | Qué lo dispara |
+|---|---|
+| `Backlog` → `In Progress` | empieza el trabajo, en una rama propia |
+| `In Progress` → `In Review` | **hay un pull request abierto** con el CI en verde |
+| `In Review` → `Done` | **el pull request está mergeado** en `main` |
+
+Por eso `main` no recibe commits directos: cada historia entra por un pull request, y su tarjeta no
+llega a `Done` hasta que ese PR se mergea. El historial del repo y el tablero cuentan la misma cosa.
+
 ## Arquitectura
 
 Modular por feature, con el mismo criterio que el backend. Cada módulo expone sólo lo que la app monta:
