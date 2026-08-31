@@ -44,8 +44,6 @@ npm install
 npm start        # http://localhost:8080
 ```
 
-A diferencia del backend, NodeJS 16 tiene build nativa para Apple Silicon: acá no hace falta Rosetta.
-
 | | |
 |---|---|
 | Puerto de la app | **8080** |
