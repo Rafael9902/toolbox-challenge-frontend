@@ -52,22 +52,9 @@ npm start        # http://localhost:8080
 
 ## Qué vas a ver
 
-Abrí **http://localhost:8080**. Una barra roja arriba, un selector para filtrar por archivo, y la
-tabla:
+Abrí **http://localhost:8080**:
 
-```
-┌───────────────────────────────────────────────────────────────────────────────┐
-│                                                                               │  <- barra
-├───────────────────────────────────────────────────────────────────────────────┤
-│  Filter by file name:  [ All files          ▾ ]                               │
-├───────────┬──────────────┬───────────┬────────────────────────────────────────┤
-│ File Name │ Text         │ Number    │ Hex                                    │
-├───────────┼──────────────┼───────────┼────────────────────────────────────────┤
-│ test2.csv │ YcCXKLtFlxm  │ 89632563  │ 17cd994543cc9428c90dbf011c269ea3       │
-│ test3.csv │ g            │ 101382507 │ 65badd1f29e6235199261cd3026a97f5       │
-│ …         │ …            │ …         │ …                                      │
-└───────────┴──────────────┴───────────┴────────────────────────────────────────┘
-```
+![La aplicación mostrando la tabla de archivos](docs/screenshot.png)
 
 La tabla es **plana**: el nombre del archivo se repite en cada una de sus líneas. El selector filtra
 del lado del servidor — elegir un archivo hace que el API descargue sólo ese.
@@ -134,9 +121,7 @@ negociable, valiosa, estimable, pequeña y testeable.
 
 **Los criterios de aceptación son el contrato.** Cuando el enunciado dejaba algo ambiguo, la decisión
 quedó documentada en la historia y en las [Decisiones de diseño](#decisiones-de-diseño) en vez de
-resolverse en silencio dentro del código. Un caso concreto: el wireframe original nunca se pudo
-consultar, así que la historia del layout dejó asentado el patrón asumido en vez de fingir que se
-había verificado.
+resolverse en silencio dentro del código.
 
 ### El tablero
 

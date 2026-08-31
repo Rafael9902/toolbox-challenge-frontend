@@ -1,0 +1,10 @@
+/*
+ * The only stylesheet of the project.
+ *
+ * The wireframe fixes the bar at #ff6666, a colour Bootstrap does not carry:
+ * its `danger` is #dc3545, clearly darker. Everything else still comes from
+ * React Bootstrap — see the design decisions in the README.
+ */
+.app-bar {
+  background-color: #ff6666;
+}
