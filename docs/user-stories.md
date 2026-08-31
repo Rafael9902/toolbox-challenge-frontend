@@ -5,9 +5,9 @@
 **Repositorio destino:** `toolbox-challenge-frontend`
 **Fecha de elaboración:** 2026-08-27
 
-> **Estado:** `TASK-001` está entregada (ver `Done` en el board). El resto sigue pendiente.
-> Este documento es el backlog de planificación: los criterios de aceptación son el contrato;
-> las *Notas técnicas* reflejan las decisiones ya tomadas durante la implementación.
+> **Estado: las 10 historias están entregadas** — las 6 obligatorias y los 4 puntos opcionales.
+> Este documento es el backlog de planificación: los criterios de aceptación son el contrato, y las
+> *Notas técnicas* reflejan las decisiones tomadas durante la implementación.
 
 ---
 
@@ -23,11 +23,12 @@
 | API consumida | `GET /files/data` del backend propio (nunca el API Externo directamente) |
 | Restricción | Sin dependencias globales, sin variables de entorno obligatorias, sin configuración de un SO específico |
 
-### Supuesto sobre el wireframe
+### El wireframe
 
-> ⚠️ El wireframe (`https://cs1.ssltrust.me/s/ECH9VusiMmi3ac1`) no está disponible en este análisis. Se asume el layout clásico del challenge:
-> **navbar superior con el título de la app** + **tabla centrada** con las columnas `File Name | Text | Number | Hex`, y (para el punto opcional) un **campo/selector de filtro por nombre de archivo** sobre la tabla.
-> El layout entregado fue contrastado contra él.
+> El wireframe (`https://cs1.ssltrust.me/s/ECH9VusiMmi3ac1`) **se consultó**, y el layout entregado lo
+> sigue: barra superior con el título `React Test App` sobre `#ff6666`, y la tabla a ancho completo con
+> las columnas `File Name | Text | Number | Hex`. El selector de filtro no aparece en el wireframe: es
+> un agregado del punto opcional.
 
 ### Flujo objetivo
 
@@ -406,9 +407,12 @@ Opcionales: HU-FE-07 (filtro por fileName) · HU-FE-08 (Redux) · HU-FE-09 (Jest
 
 ---
 
-## Dudas a consultar con quien envió el challenge
+## Ambigüedades del enunciado, y cómo se resolvieron
 
-1. ¿El wireframe incluye el campo de filtro por archivo, o éste sólo corresponde al punto opcional?
-2. ¿Se espera paginación o scroll en la tabla si el volumen de filas es alto?
-4. ¿Se espera algún manejo de orden (por archivo, por número) en la tabla?
-5. ¿Se prefiere `npm start` en modo desarrollo (Dev Server) o sirviendo el bundle de producción?
+| Ambigüedad | Resolución |
+|---|---|
+| ¿El wireframe incluye el campo de filtro? | **No.** Se consultó el wireframe: no lo muestra. El selector es un agregado del punto opcional, y por eso se ubicó sobre la tabla sin alterar el resto del layout |
+| ¿Paginación o scroll si hay muchas filas? | **Ninguna de las dos.** El enunciado no las pide y el volumen real son decenas de filas. La tabla usa `responsive` de React Bootstrap, que da scroll horizontal en pantallas angostas |
+| ¿Algún orden particular en la tabla? | **El del API**, que a su vez conserva el del listado del API externo. Ordenar por otra cosa sería inventar un requisito |
+| ¿`npm start` en modo desarrollo o sirviendo el bundle? | **Dev server**, que es lo que se espera de `npm start` en un proyecto con Webpack. El bundle de producción se sirve con `npm run build` o con la imagen de Docker |
+| ¿Cross-origin con CORS o con el proxy del Dev Server? | **CORS en el API.** El proxy sólo funciona mientras el dev server esté en el medio, y deja de servir en cuanto el bundle se sirve como estático |
